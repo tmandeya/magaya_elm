@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Magaya Mining Brand Colors */
+    --color-black: #1A1A1A;
+    --color-gold: #D4A017;
+    --color-gold-light: #E8C44A;
+    --color-gold-dark: #A67C0A;
+
+    /* Canvas Colors */
+    --color-canvas: #F4F3EF;
+    --color-surface: #FFFFFF;
+    --color-surface-elevated: #FAFAF8;
+    --color-border: #E5E4E0;
+    --color-border-hover: #C4C3BF;
+    --color-divider: #D9D8D4;
+
+    /* Functional Colors */
+    --color-success: #1B7A43;
+    --color-success-bg: #E8F5EC;
+    --color-warning: #C27A06;
+    --color-warning-bg: #FDF3E0;
+    --color-danger: #B91C1C;
+    --color-danger-bg: #FEF2F2;
+    --color-info: #1E6BA3;
+    --color-info-bg: #E8F2FA;
+
+    /* Text Colors */
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #525252;
+    --color-text-tertiary: #9C9C9C;
+    --color-muted: #737373;
+
+    /* Layout Dimensions */
+    --sidebar-width: 260px;
+    --sidebar-collapsed: 64px;
+    --topbar-height: 56px;
+    --breadcrumb-height: 40px;
+    --content-max-width: 1440px;
+
+    /* Component Sizes */
+    --card-radius: 10px;
+    --card-radius-sm: 6px;
+    --input-height: 40px;
+    --button-height: 40px;
+    --button-height-sm: 32px;
+    --avatar-size: 36px;
+    --avatar-size-lg: 48px;
+    --badge-height: 24px;
+
+    /* Spacing Scale */
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* shadcn overrides */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 43 79% 46%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 11% 95%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 40 11% 95%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 40 11% 95%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 72% 41%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 7% 89%;
+    --input: 40 7% 89%;
+    --ring: 43 79% 46%;
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 61%;
+    --sidebar-primary: 43 79% 46%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 43 79% 46%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 43 79% 46%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-text-primary);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-hover);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted);
+  }
+}

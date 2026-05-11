@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { List, Clock, Bell, Settings as SettingsIcon, Users, Shield, Plus, Pencil, EyeOff, Eye, Search, Save, RotateCcw, AlertTriangle, Check, X } from "lucide-react";
+import { List, Clock, Bell, Settings as SettingsIcon, Users, Shield, Plus, Pencil, EyeOff, Search, Save, RotateCcw, AlertTriangle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

@@ -163,7 +163,7 @@ export async function updateStage(stageId: string, updates: any) {
 
 export async function uploadEmployeePhoto(employeeId: string, file: File) {
   const filePath = `${employeeId}/photo_${Date.now()}.${file.name.split('.').pop()}`;
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('employee-photos')
     .upload(filePath, file, { upsert: true });
   
@@ -178,7 +178,7 @@ export async function uploadEmployeePhoto(employeeId: string, file: File) {
 
 export async function uploadEmployeeDocument(employeeId: string, file: File, documentType: string) {
   const filePath = `${employeeId}/${documentType}/${Date.now()}_${file.name}`;
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('employee-documents')
     .upload(filePath, file);
   

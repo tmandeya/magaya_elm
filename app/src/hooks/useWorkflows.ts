@@ -1,23 +1,16 @@
-// Remove this:
-// import { employees } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { getWorkflows } from '@/lib/supabase';
 
-// Use this instead:
-import { useEmployees } from '@/hooks/useEmployees';
+export function useWorkflows(filters?: { type?: string; status?: string }) {
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-function EmployeesPage() {
-  const { employees, loading } = useEmployees();
-  
-  if (loading) return <div>Loading employees...</div>;
-  
-  return (
-    <table>
-      {employees.map(emp => (
-        <tr key={emp.id}>
-          <td>{emp.employee_code}</td>
-          <td>{emp.full_name}</td>
-          <td>{emp.site?.name}</td>
-        </tr>
-      ))}
-    </table>
-  );
+  useEffect(() => {
+    getWorkflows(filters).then(({ data }) => {
+      setWorkflows(data || []);
+      setLoading(false);
+    });
+  }, [JSON.stringify(filters)]);
+
+  return { workflows, loading };
 }

@@ -14,7 +14,7 @@ Your Computer → GitHub → Vercel (Live Website)
 | Service | What It Does | Your Link |
 |---------|-------------|-----------|
 | **GitHub** | Stores your code | https://github.com/tmandeya/magaya_elm |
-| **Supabase** | Database, user login, file storage | https://supabase.com/dashboard/project/sgtnrvfnyyfnklobcpkm |
+| **Supabase** | Database, user login, file storage | https://supabase.com/dashboard/project/wjiyxnctajxogxqslyii |
 | **Vercel** | Hosts your website live | https://vercel.com |
 
 ---
@@ -84,7 +84,7 @@ Go to https://github.com/tmandeya/magaya_elm in your browser. You should see all
 **Why:** Supabase is where ALL your data lives — employees, workflows, files, everything.
 
 ### 2.1 Open your Supabase project
-Go to: https://supabase.com/dashboard/project/sgtnrvfnyyfnklobcpkm
+Go to: https://supabase.com/dashboard/project/wjiyxnctajxogxqslyii
 
 ### 2.2 Run the Database Schema
 
@@ -141,7 +141,7 @@ CREATE POLICY "Allow authenticated reads" ON storage.objects
 1. In the left sidebar, click **"Project Settings"** (gear icon at bottom)
 2. Click **"API"**
 3. Copy these two values:
-   - **Project URL** (looks like `https://sgtnrvfnyyfnklobcpkm.supabase.co`)
+   - **Project URL** (looks like `https://wjiyxnctajxogxqslyii.supabase.co`)
    - **anon public** key (long string starting with `eyJ...`)
 
 **Keep these safe — you'll need them in Step 4.**
@@ -176,7 +176,7 @@ cp /mnt/agents/output/.env.example /mnt/agents/output/app/.env
 Then edit `.env` and fill in your actual Supabase values:
 
 ```env
-VITE_SUPABASE_URL=https://sgtnrvfnyyfnklobcpkm.supabase.co
+VITE_SUPABASE_URL=https://wjiyxnctajxogxqslyii.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs... (your actual key)
 ```
 
@@ -459,7 +459,7 @@ Click **"Environment Variables"** and add these:
 
 | Name | Value |
 |------|-------|
-| `VITE_SUPABASE_URL` | `https://sgtnrvfnyyfnklobcpkm.supabase.co` |
+| `VITE_SUPABASE_URL` | `https://wjiyxnctajxogxqslyii.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGci...` (your actual anon key) |
 
 ### 5.4 Deploy!

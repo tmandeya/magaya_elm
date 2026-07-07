@@ -1,54 +1,124 @@
-import { useState, useCallback, useContext, createContext } from "react";
+import { useState, useEffect, useCallback, useContext, createContext, useRef } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase, fetchMyProfile, touchLastLogin } from "@/lib/supabase";
+import { DB_ROLE_TO_UI, ROLE_LABELS, initialsFromName } from "@/types/db";
 import type { UserRole, User } from "@/types";
-
-const MOCK_USERS: Record<UserRole, User> = {
-  site_admin: { id: "USR-001", name: "Tendai Moyo", email: "tendai.moyo@magaya.co.zw", role: "site_admin", roleLabel: "Site Administrator", siteId: 5, siteName: "Pickstone", initials: "TM" },
-  site_hr: { id: "USR-002", name: "Rudo Chikwamba", email: "rudo.chikwamba@magaya.co.zw", role: "site_hr", roleLabel: "Site HR", siteId: 2, siteName: "Harare — 207 Sam Nujoma", initials: "RC" },
-  site_security: { id: "USR-003", name: "Simba Katsande", email: "simba.katsande@magaya.co.zw", role: "site_security", roleLabel: "Site Security", siteId: 6, siteName: "Chanton", initials: "SK" },
-  site_it: { id: "USR-004", name: "Blessing Mhlanga", email: "blessing.mhlanga@magaya.co.zw", role: "site_it", roleLabel: "Site IT Administrator", siteId: 4, siteName: "Peladillo", initials: "BM" },
-  hq_hr: { id: "USR-005", name: "Faith Dube", email: "faith.dube@magaya.co.zw", role: "hq_hr", roleLabel: "HQ HR", initials: "FD" },
-  hod_hr: { id: "USR-006", name: "Peter Chirwa", email: "peter.chirwa@magaya.co.zw", role: "hod_hr", roleLabel: "HOD HR", initials: "PC" },
-  hq_admin: { id: "USR-007", name: "Grace Ncube", email: "grace.ncube@magaya.co.zw", role: "hq_admin", roleLabel: "HQ Administrator", initials: "GN" },
-  hod_security: { id: "USR-008", name: "Tatenda Marufu", email: "tatenda.marufu@magaya.co.zw", role: "hod_security", roleLabel: "HOD Security", initials: "TM" },
-  hq_it: { id: "USR-009", name: "Nyasha Gomo", email: "nyasha.gomo@magaya.co.zw", role: "hq_it", roleLabel: "HQ IT", initials: "NG" },
-  hod_it: { id: "USR-010", name: "Tafadzwa Mhembere", email: "tafadzwa.mhembere@magaya.co.zw", role: "hod_it", roleLabel: "HOD IT", initials: "TMh" },
-};
 
 interface AuthContextType {
   user: User | null;
   currentRole: UserRole | null;
+  /** UUID of the user's site in the live database (null for HQ roles). */
+  siteUuid: string | null;
   isAuthenticated: boolean;
-  login: (role: UserRole, siteId?: number) => void;
-  logout: () => void;
-  setRole: (role: UserRole) => void;
+  /** True while the initial session is being restored. */
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ error: string | null }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, currentRole: null, isAuthenticated: false,
-  login: () => {}, logout: () => {}, setRole: () => {},
+  user: null,
+  currentRole: null,
+  siteUuid: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => ({ error: "Auth not initialised" }),
+  logout: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
+  const [siteUuid, setSiteUuid] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const loadedForUserId = useRef<string | null>(null);
 
-  const login = useCallback((role: UserRole, siteId?: number) => {
-    const mockUser = { ...MOCK_USERS[role] };
-    if (siteId && mockUser) { mockUser.siteId = siteId; }
-    setUser(mockUser);
-    setCurrentRole(role);
+  const loadProfile = useCallback(async (session: Session | null): Promise<string | null> => {
+    if (!session?.user) {
+      setUser(null);
+      setCurrentRole(null);
+      setSiteUuid(null);
+      loadedForUserId.current = null;
+      return null;
+    }
+    // Avoid refetching on token refresh events for the same user
+    if (loadedForUserId.current === session.user.id) return null;
+
+    const { data: profile, error } = await fetchMyProfile(session.user.id);
+    if (error || !profile) {
+      await supabase.auth.signOut();
+      return "Your account has no profile in ELMS. Contact the system administrator.";
+    }
+    if (!profile.is_active) {
+      await supabase.auth.signOut();
+      return "Your account has been deactivated. Contact the system administrator.";
+    }
+
+    const uiRole = DB_ROLE_TO_UI[profile.role as keyof typeof DB_ROLE_TO_UI];
+    if (!uiRole) {
+      await supabase.auth.signOut();
+      return "Your account role is not recognised. Contact the system administrator.";
+    }
+
+    setUser({
+      id: profile.id,
+      name: profile.full_name,
+      email: profile.email,
+      role: uiRole,
+      roleLabel: ROLE_LABELS[uiRole],
+      siteName: profile.sites?.name ?? undefined,
+      avatarUrl: profile.avatar_url ?? undefined,
+      initials: initialsFromName(profile.full_name),
+    });
+    setCurrentRole(uiRole);
+    setSiteUuid(profile.site_id ?? null);
+    loadedForUserId.current = profile.id;
+    touchLastLogin(profile.id);
+    return null;
   }, []);
 
-  const logout = useCallback(() => { setUser(null); setCurrentRole(null); }, []);
+  useEffect(() => {
+    let cancelled = false;
 
-  const setRole = useCallback((role: UserRole) => {
-    setCurrentRole(role);
-    const mockUser = MOCK_USERS[role];
-    if (mockUser) { setUser(mockUser); }
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (cancelled) return;
+      await loadProfile(session);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Supabase warns against awaiting inside this callback; defer instead.
+      setTimeout(() => { void loadProfile(session); }, 0);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [loadProfile]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      const msg = error.message === "Invalid login credentials"
+        ? "Incorrect email or password."
+        : error.message;
+      return { error: msg };
+    }
+    const profileError = await loadProfile(data.session);
+    return { error: profileError };
+  }, [loadProfile]);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setCurrentRole(null);
+    setSiteUuid(null);
+    loadedForUserId.current = null;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, currentRole, isAuthenticated: !!user, login, logout, setRole }}>
+    <AuthContext.Provider value={{ user, currentRole, siteUuid, isAuthenticated: !!user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

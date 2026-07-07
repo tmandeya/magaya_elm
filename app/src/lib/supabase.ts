@@ -38,7 +38,35 @@ export async function getSession() {
 }
 
 // ============================
+// PROFILES (v2 schema — auth-linked users)
+// ============================
+
+export async function fetchMyProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*, sites(id, name, code)')
+    .eq('id', userId)
+    .single();
+  return { data, error };
+}
+
+/** Fire-and-forget: stamp last login on own profile (RLS: profiles_update_own). */
+export function touchLastLogin(userId: string) {
+  void supabase
+    .from('profiles')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('id', userId)
+    .then(({ error }) => {
+      if (error) console.warn('last_login_at update failed:', error.message);
+    });
+}
+
+// ============================
 // EMPLOYEE CRUD
+// ⚠️ LEGACY: the functions below target the OLD v1 schema
+// (employee_code, phone_number, config_* tables). They compile but will
+// fail at runtime against the live v2 database. Each will be rewritten
+// as its page is wired. Do not call from new code.
 // ============================
 
 export async function getEmployees(filters?: {

@@ -4,9 +4,8 @@ import {
   Plus, Search, ChevronDown, ChevronUp, ChevronsUpDown, Download,
   Eye, Pencil, Trash2, X, Columns3, Check
 } from "lucide-react";
-import { employees, sites } from "@/data/mockData";
-import { useAuth } from "@/hooks/useAuth";
-import type { Employee, EmployeeStatus, Department } from "@/types";
+import { useEmployees, type LiveEmployee } from "@/hooks/useEmployees";
+import type { EmployeeStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,73 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// ── Extended employee type with extra fields ───────────────────────────────
-interface ExtendedEmployee extends Employee {
-  gender?: "Male" | "Female" | "Other";
-  dateOfBirth?: string;
-  nationalId?: string;
-  nationality?: string;
-  code?: string;
-  position?: string;
-  homeAddress?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  emergencyContactRelationship?: string;
-  employeeType?: "Permanent" | "Contract" | "Casual" | "Intern";
-  jobGrade?: string;
-  contractStart?: string;
-  contractEnd?: string | null;
-  costCentre?: string;
-  yearsOfExperience?: number;
-  academicQualifications?: string;
-  reportingLineName?: string;
-}
+type ExtendedEmployee = LiveEmployee;
 
-// ── Generate extended mock data with realistic Zimbabwean names ────────────
-const GRADES = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10"];
-
-const EXTRA_FIELDS: Record<string, Partial<ExtendedEmployee>> = {
-  "EMP-2024-001": { gender: "Male", dateOfBirth: "1985-03-15", nationalId: "88-1234567A88", nationality: "Zimbabwean", code: "MM-2024-0042", position: "Senior Mechanical Engineer", homeAddress: "45 Harare Drive, Harare", emergencyContactName: "Sarah Mutasa", emergencyContactPhone: "+263 772 999 888", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 7", contractStart: "2024-01-10", contractEnd: null, costCentre: "CC-001", yearsOfExperience: 12, academicQualifications: "BSc Mechanical Engineering (UZ), MSc (Wits)", reportingLineName: "Kudakwashe Mupini" },
-  "EMP-2024-002": { gender: "Female", dateOfBirth: "1992-07-22", nationalId: "92-7654321B92", nationality: "Zimbabwean", code: "MM-2024-0039", position: "Human Resources Officer", homeAddress: "12 Mbuya Nehanda St, Harare", emergencyContactName: "Mary Mupfumi", emergencyContactPhone: "+263 773 111 222", emergencyContactRelationship: "Mother", employeeType: "Permanent", jobGrade: "Grade 5", contractStart: "2024-02-01", contractEnd: null, costCentre: "CC-002", yearsOfExperience: 5, academicQualifications: "BCom Accounting (NUST)", reportingLineName: "Faith Dube" },
-  "EMP-2024-003": { gender: "Male", dateOfBirth: "1988-11-10", nationalId: "85-2345678D85", nationality: "Zimbabwean", code: "MM-2023-0187", position: "Head of Security", homeAddress: "78 Sekuru Kaguvi St, Harare", emergencyContactName: "Anna Katsande", emergencyContactPhone: "+263 774 333 444", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 8", contractStart: "2023-06-01", contractEnd: null, costCentre: "CC-004", yearsOfExperience: 15, academicQualifications: "Diploma in Security Management", reportingLineName: "Tendai Mutasa" },
-  "EMP-2024-004": { gender: "Male", dateOfBirth: "1995-01-18", nationalId: "93-5678901F93", nationality: "Zimbabwean", code: "MM-2024-0035", position: "Systems Administrator", homeAddress: "23 Robert Mugabe Rd, Harare", emergencyContactName: "Joyce Mhlanga", emergencyContactPhone: "+263 775 555 666", emergencyContactRelationship: "Sister", employeeType: "Contract", jobGrade: "Grade 5", contractStart: "2024-03-15", contractEnd: "2025-03-14", costCentre: "CC-003", yearsOfExperience: 3, academicQualifications: "BSc Computer Science (NUST)", reportingLineName: "Nyasha Gomo" },
-  "EMP-2024-005": { gender: "Female", dateOfBirth: "1982-06-25", nationalId: "87-6789012G87", nationality: "Zimbabwean", code: "MM-2022-0087", position: "HR Director", homeAddress: "56 Samora Machel Ave, Harare", emergencyContactName: "John Dube", emergencyContactPhone: "+263 776 777 888", emergencyContactRelationship: "Husband", employeeType: "Permanent", jobGrade: "Grade 9", contractStart: "2022-07-15", contractEnd: null, costCentre: "CC-008", yearsOfExperience: 18, academicQualifications: "MBA (UZ), BCom Business Management", reportingLineName: "Board" },
-  "EMP-2024-006": { gender: "Male", dateOfBirth: "1979-09-05", nationalId: "91-8901234I91", nationality: "Zimbabwean", code: "MM-2023-0156", position: "Head of Department - HR", homeAddress: "89 Josiah Tongogara St, Harare", emergencyContactName: "Elizabeth Chirwa", emergencyContactPhone: "+263 777 999 000", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 8", contractStart: "2023-04-15", contractEnd: null, costCentre: "CC-005", yearsOfExperience: 20, academicQualifications: "BSc Geology (UZ), MSc Mineral Exploration (Cape Town)", reportingLineName: "Faith Dube" },
-  "EMP-2024-007": { gender: "Female", dateOfBirth: "1987-12-12", nationalId: "90-3456789E90", nationality: "Zimbabwean", code: "MM-2022-0076", position: "Administrative Director", homeAddress: "34 Fourth St, Harare", emergencyContactName: "Michael Ncube", emergencyContactPhone: "+263 778 000 111", emergencyContactRelationship: "Husband", employeeType: "Permanent", jobGrade: "Grade 9", contractStart: "2022-03-01", contractEnd: null, costCentre: "CC-006", yearsOfExperience: 14, academicQualifications: "BCom Accounting (UZ), CA (Z), MBA", reportingLineName: "Board" },
-  "EMP-2024-008": { gender: "Male", dateOfBirth: "1980-04-22", nationalId: "86-4567890P90", nationality: "Zimbabwean", code: "MM-2023-0145", position: "Security Director", homeAddress: "67 Kaguvi St, Harare", emergencyContactName: "Patricia Marufu", emergencyContactPhone: "+263 779 222 333", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 9", contractStart: "2022-08-15", contractEnd: null, costCentre: "CC-007", yearsOfExperience: 16, academicQualifications: "BSc Mining Engineering (UZ), Mine Managers Cert", reportingLineName: "Board" },
-  "EMP-2024-009": { gender: "Male", dateOfBirth: "1984-08-30", nationalId: "89-9012345J89", nationality: "Zimbabwean", code: "MM-2024-0045", position: "IT Director", homeAddress: "90 Rotten Row, Harare", emergencyContactName: "Lisa Gomo", emergencyContactPhone: "+263 780 444 555", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 9", contractStart: "2021-11-01", contractEnd: null, costCentre: "CC-009", yearsOfExperience: 16, academicQualifications: "BSc Transport & Logistics (MSU)", reportingLineName: "Board" },
-  "EMP-2024-010": { gender: "Male", dateOfBirth: "1990-02-14", nationalId: "96-0123456K96", nationality: "Zimbabwean", code: "MM-2022-0065", position: "Head of Department - IT", homeAddress: "11 Nyerere Way, Harare", emergencyContactName: "Anna Mhembere", emergencyContactPhone: "+263 781 666 777", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 8", contractStart: "2022-05-01", contractEnd: null, costCentre: "CC-010", yearsOfExperience: 10, academicQualifications: "BSc IT (Harare Institute of Technology)", reportingLineName: "Nyasha Gomo" },
-  "EMP-2024-011": { gender: "Female", dateOfBirth: "1993-05-08", nationalId: "84-1234567L84", nationality: "Zimbabwean", code: "MM-2023-0134", position: "Senior Finance Officer", homeAddress: "22 Kwame Nkrumah Ave, Harare", emergencyContactName: "David Mhondera", emergencyContactPhone: "+263 782 888 999", emergencyContactRelationship: "Father", employeeType: "Permanent", jobGrade: "Grade 7", contractStart: "2022-04-01", contractEnd: null, costCentre: "CC-011", yearsOfExperience: 8, academicQualifications: "BCom Finance (UZ), ACCA", reportingLineName: "Faith Dube" },
-  "EMP-2024-012": { gender: "Male", dateOfBirth: "1978-11-20", nationalId: "94-2345678M94", nationality: "Zimbabwean", code: "MM-2022-0091", position: "Senior Mine Manager", homeAddress: "33 Leopold Takawira St, Harare", emergencyContactName: "Ruth Mupfumi", emergencyContactPhone: "+263 783 000 111", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 10", contractStart: "2023-05-15", contractEnd: null, costCentre: "CC-012", yearsOfExperience: 22, academicQualifications: "BSc Mining Engineering (UZ), Mine Managers Cert", reportingLineName: "Board" },
-  "EMP-2024-013": { gender: "Female", dateOfBirth: "1991-07-15", nationalId: "82-7890123H82", nationality: "Zimbabwean", code: "MM-2023-0123", position: "HR Officer", homeAddress: "44 Park Lane, Harare", emergencyContactName: "George Chikwamba", emergencyContactPhone: "+263 784 222 333", emergencyContactRelationship: "Brother", employeeType: "Permanent", jobGrade: "Grade 5", contractStart: "2023-03-01", contractEnd: null, costCentre: "CC-013", yearsOfExperience: 6, academicQualifications: "BSc Human Resources (MSU)", reportingLineName: "Faith Dube" },
-  "EMP-2024-014": { gender: "Male", dateOfBirth: "1986-03-28", nationalId: "95-4567890C95", nationality: "Zimbabwean", code: "MM-2024-0048", position: "Site Administrator", homeAddress: "55 Jason Moyo Ave, Harare", emergencyContactName: "Grace Moyo", emergencyContactPhone: "+263 785 444 555", emergencyContactRelationship: "Mother", employeeType: "Permanent", jobGrade: "Grade 6", contractStart: "2024-05-01", contractEnd: null, costCentre: "CC-014", yearsOfExperience: 9, academicQualifications: "Diploma in Business Administration", reportingLineName: "Grace Ncube" },
-  "EMP-2024-015": { gender: "Male", dateOfBirth: "1983-09-17", nationalId: "86-3456789N86", nationality: "Zimbabwean", code: "MM-2022-0098", position: "Senior Mechanical Engineer", homeAddress: "66 Central Ave, Harare", emergencyContactName: "Joyce Chingwara", emergencyContactPhone: "+263 786 666 777", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 8", contractStart: "2022-09-01", contractEnd: null, costCentre: "CC-014", yearsOfExperience: 16, academicQualifications: "BSc Mechanical Engineering (UZ), PrEng", reportingLineName: "John Mupfumi" },
-  "EMP-2024-016": { gender: "Male", dateOfBirth: "1989-01-05", nationalId: "91-2345678S91", nationality: "Zimbabwean", code: "MM-2023-0110", position: "Senior Geologist", homeAddress: "77 Speke Ave, Harare", emergencyContactName: "Maria Mupfuti", emergencyContactPhone: "+263 787 888 999", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 7", contractStart: "2023-02-15", contractEnd: null, costCentre: "CC-015", yearsOfExperience: 10, academicQualifications: "BSc Geology (UZ), MSc (Cape Town)", reportingLineName: "John Mupfumi" },
-  "EMP-2024-017": { gender: "Male", dateOfBirth: "1981-06-12", nationalId: "85-8765432T85", nationality: "Zimbabwean", code: "MM-2023-0105", position: "Processing Plant Manager", homeAddress: "88 Manica Rd, Harare", emergencyContactName: "Esther Makoni", emergencyContactPhone: "+263 788 000 111", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 9", contractStart: "2022-08-15", contractEnd: null, costCentre: "CC-016", yearsOfExperience: 18, academicQualifications: "BSc Metallurgical Engineering (UZ)", reportingLineName: "John Mupfumi" },
-  "EMP-2024-018": { gender: "Female", dateOfBirth: "1988-12-03", nationalId: "93-3456789U93", nationality: "Zimbabwean", code: "MM-2023-0095", position: "Health & Safety Manager", homeAddress: "99 Abercorn St, Harare", emergencyContactName: "Thomas Sibanda", emergencyContactPhone: "+263 789 222 333", emergencyContactRelationship: "Husband", employeeType: "Permanent", jobGrade: "Grade 7", contractStart: "2023-01-10", contractEnd: null, costCentre: "CC-017", yearsOfExperience: 11, academicQualifications: "BSc Environmental Health (UZ), NEBOSH Cert", reportingLineName: "John Mupfumi" },
-  "EMP-2024-019": { gender: "Male", dateOfBirth: "1996-04-25", nationalId: "97-4567890V97", nationality: "Zimbabwean", code: "MM-2024-0055", position: "Chief Maintenance Officer", homeAddress: "110 Livingstone Ave, Harare", emergencyContactName: "Rose Mushonga", emergencyContactPhone: "+263 790 444 555", emergencyContactRelationship: "Mother", employeeType: "Contract", jobGrade: "Grade 6", contractStart: "2024-06-01", contractEnd: "2025-05-31", costCentre: "CC-018", yearsOfExperience: 4, academicQualifications: "HND in Electrical Engineering", reportingLineName: "John Mupfumi" },
-  "EMP-2024-020": { gender: "Female", dateOfBirth: "1994-10-10", nationalId: "92-5678901W92", nationality: "Zimbabwean", code: "MM-2024-0018", position: "HR Assistant", homeAddress: "121 George Silundika Ave, Harare", emergencyContactName: "Joseph Mashaya", emergencyContactPhone: "+263 791 666 777", emergencyContactRelationship: "Father", employeeType: "Contract", jobGrade: "Grade 4", contractStart: "2024-01-15", contractEnd: "2025-01-14", costCentre: "CC-019", yearsOfExperience: 3, academicQualifications: "Diploma in Human Resources", reportingLineName: "Rudo Chikwamba" },
-  "EMP-2024-021": { gender: "Male", dateOfBirth: "1987-08-18", nationalId: "89-6789012X89", nationality: "Zimbabwean", code: "MM-2023-0088", position: "Security Supervisor", homeAddress: "132 Herbert Chitepo St, Harare", emergencyContactName: "Priscilla Mudzviti", emergencyContactPhone: "+263 792 888 999", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 6", contractStart: "2023-04-01", contractEnd: null, costCentre: "CC-020", yearsOfExperience: 9, academicQualifications: "Diploma in Security Management", reportingLineName: "Tatenda Marufu" },
-  "EMP-2024-022": { gender: "Male", dateOfBirth: "1992-02-07", nationalId: "95-7890123Y95", nationality: "Zimbabwean", code: "MM-2024-0028", position: "IT Support Specialist", homeAddress: "143 Nelson Mandela Ave, Harare", emergencyContactName: " Catherine Machingura", emergencyContactPhone: "+263 793 000 111", emergencyContactRelationship: "Sister", employeeType: "Permanent", jobGrade: "Grade 5", contractStart: "2024-02-15", contractEnd: null, costCentre: "CC-021", yearsOfExperience: 5, academicQualifications: "BSc Computer Science (NUST)", reportingLineName: "Tafadzwa Mhembere" },
-  "EMP-2024-023": { gender: "Female", dateOfBirth: "1985-07-30", nationalId: "88-8901234Z88", nationality: "Zimbabwean", code: "MM-2023-0075", position: "Senior Accountant", homeAddress: "154 Sam Nujoma St, Harare", emergencyContactName: "Robert Mupindu", emergencyContactPhone: "+263 794 222 333", emergencyContactRelationship: "Husband", employeeType: "Permanent", jobGrade: "Grade 7", contractStart: "2022-06-01", contractEnd: null, costCentre: "CC-022", yearsOfExperience: 13, academicQualifications: "BCom Accounting (UZ), CA (Z)", reportingLineName: "Samantha Mhondera" },
-  "EMP-2024-024": { gender: "Male", dateOfBirth: "1980-05-14", nationalId: "83-9012345A83", nationality: "Zimbabwean", code: "MM-2022-0058", position: "Senior Mine Surveyor", homeAddress: "165 Bulawayo Rd, Harare", emergencyContactName: "Dorothy Gorejena", emergencyContactPhone: "+263 795 444 555", emergencyContactRelationship: "Spouse", employeeType: "Permanent", jobGrade: "Grade 8", contractStart: "2022-10-01", contractEnd: null, costCentre: "CC-023", yearsOfExperience: 19, academicQualifications: "BSc Surveying (UZ)", reportingLineName: "John Mupfumi" },
-  "EMP-2024-025": { gender: "Female", dateOfBirth: "1997-09-01", nationalId: "98-0123456B98", nationality: "Zimbabwean", code: "MM-2024-0060", position: "Operations Coordinator", homeAddress: "176 Churchill Rd, Harare", emergencyContactName: "Steven Mupambwa", emergencyContactPhone: "+263 796 666 777", emergencyContactRelationship: "Father", employeeType: "Intern", jobGrade: "Grade 2", contractStart: "2024-08-01", contractEnd: "2025-07-31", costCentre: "CC-024", yearsOfExperience: 0, academicQualifications: "BSc Operations Management (UZ)", reportingLineName: "Tendai Mutasa" },
-};
-
-// Merge base employees with extended fields
-const allEmployees: ExtendedEmployee[] = employees.map((e) => ({
-  ...e,
-  ...(EXTRA_FIELDS[e.id] || {}),
-  // Fallback gender assignment based on name patterns for those without data
-  gender: (EXTRA_FIELDS[e.id]?.gender) || (e.id.charCodeAt(e.id.length - 1) % 2 === 0 ? "Female" : "Male") as "Male" | "Female" | "Other",
-}));
+const GRADES = ["A", "B", "C", "D", "E", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10"];
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const DEPARTMENTS: Department[] = [
-  "Human Resources", "Security", "Information Technology", "Operations",
-  "Finance", "Engineering", "Administration", "Health & Safety",
-  "Mining", "Geology", "Processing", "Maintenance"
-];
+// Departments and sites now come from the database (useEmployees hook).
 
 const STATUSES: EmployeeStatus[] = ["Active", "Onboarding", "Transferred", "Offboarding", "Terminated", "Archived"];
 
@@ -101,7 +39,7 @@ type SortDir = "asc" | "desc";
 
 interface Filters {
   search: string;
-  siteIds: number[];
+  siteIds: string[];
   departments: string[];
   statuses: EmployeeStatus[];
   gender: string;
@@ -156,7 +94,10 @@ const DEFAULT_VISIBLE_COLS: Record<string, boolean> = {
 // ── Main Page Component ────────────────────────────────────────────────────
 export default function Employees() {
   const navigate = useNavigate();
-  useAuth(); // ensure auth context is available
+  const { employees: liveEmployees, sites, departments, loading, error, createEmployee, updateEmployee, archiveEmployee } = useEmployees();
+  const DEPARTMENTS = useMemo(() => departments.map((d) => d.name), [departments]);
+  const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [filters, setFilters] = useState<Filters>({
@@ -176,7 +117,6 @@ export default function Employees() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<ExtendedEmployee | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<ExtendedEmployee | null>(null);
-  const [localEmployees, setLocalEmployees] = useState(allEmployees);
 
   // Form state (simplified for new/edit)
   const [formTab, setFormTab] = useState("personal");
@@ -185,7 +125,7 @@ export default function Employees() {
 
   // ── Derived data ─────────────────────────────────────────────────────────
   const filteredEmployees = useMemo(() => {
-    let data = [...localEmployees];
+    let data = [...liveEmployees];
     if (filters.search) {
       const q = filters.search.toLowerCase();
       data = data.filter((e) =>
@@ -215,13 +155,13 @@ export default function Employees() {
       }
     });
     return data;
-  }, [localEmployees, filters, sortField, sortDir]);
+  }, [liveEmployees, filters, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
   const paginatedEmployees = filteredEmployees.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-  const getSiteName = useCallback((siteId: number) => sites.find((s) => s.id === siteId)?.fullName ?? "Unknown", []);
+  const getSiteName = useCallback((siteId: string) => sites.find((s) => s.id === siteId)?.name ?? "Unknown", [sites]);
 
   const handleSort = (field: SortField) => {
     if (field === sortField) setSortDir((d) => d === "asc" ? "desc" : "asc");
@@ -244,7 +184,7 @@ export default function Employees() {
   const activeFilterCount = (filters.siteIds.length > 0 ? 1 : 0) + (filters.departments.length > 0 ? 1 : 0) + (filters.statuses.length !== 1 || filters.statuses[0] !== "Active" ? 1 : 0) + (filters.gender !== "All" ? 1 : 0) + filters.grade.length;
 
   const openNewModal = () => {
-    setFormData({ status: "Active", employeeType: "Permanent", nationality: "Zimbabwean", siteId: 1, department: "Operations" });
+    setFormData({ status: "Active", employeeType: "Permanent", nationality: "Zimbabwean" });
     setFormErrors({});
     setFormTab("personal");
     setIsNewModalOpen(true);
@@ -263,13 +203,15 @@ export default function Employees() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
-    if (deletingEmployee) {
-      setLocalEmployees((prev) => prev.filter((e) => e.id !== deletingEmployee.id));
-      setSelectedIds((prev) => { const n = new Set(prev); n.delete(deletingEmployee.id); return n; });
-      setDeletingEmployee(null);
-      setIsDeleteModalOpen(false);
-    }
+  const handleDelete = async () => {
+    if (!deletingEmployee) return;
+    setSaving(true);
+    const err = await archiveEmployee(deletingEmployee.id);
+    setSaving(false);
+    if (err) { setActionError(err); return; }
+    setSelectedIds((prev) => { const n = new Set(prev); n.delete(deletingEmployee.id); return n; });
+    setDeletingEmployee(null);
+    setIsDeleteModalOpen(false);
   };
 
   const validateForm = (): boolean => {
@@ -283,49 +225,29 @@ export default function Employees() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSaveNew = () => {
+  const handleSaveNew = async () => {
     if (!validateForm()) return;
-    const id = `EMP-2024-${String(localEmployees.length + 1).padStart(3, "0")}`;
-    const code = `MM-2024-${String(1000 + localEmployees.length + 1)}`;
-    const newEmp: ExtendedEmployee = {
-      id,
-      firstName: formData.firstName || "",
-      lastName: formData.lastName || "",
-      email: formData.email || "",
-      phone: formData.phone || "",
-      employeeNumber: `MAG-${String(localEmployees.length + 1).padStart(3, "0")}`,
-      siteId: (formData.siteId as number) || 1,
-      department: (formData.department as Department) || "Operations",
-      role: "Employee",
-      jobTitle: formData.jobTitle || "",
-      status: (formData.status as EmployeeStatus) || "Active",
-      hireDate: formData.contractStart || new Date().toISOString().split("T")[0],
-      initials: `${(formData.firstName?.[0] ?? "")}${(formData.lastName?.[0] ?? "")}`.toUpperCase(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      code,
-      gender: (formData.gender as "Male" | "Female" | "Other") || "Male",
-      position: formData.jobTitle || "",
-      nationality: formData.nationality || "Zimbabwean",
-      employeeType: (formData.employeeType as "Permanent" | "Contract" | "Casual" | "Intern") || "Permanent",
-      jobGrade: formData.jobGrade || "Grade 1",
-      contractStart: formData.contractStart,
-      contractEnd: formData.contractEnd || null,
-      costCentre: formData.costCentre || "",
-    };
-    setLocalEmployees((prev) => [newEmp, ...prev]);
+    setSaving(true);
+    setActionError(null);
+    const err = await createEmployee(formData);
+    setSaving(false);
+    if (err) { setActionError(err); return; }
     setIsNewModalOpen(false);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!validateForm() || !editingEmployee) return;
-    setLocalEmployees((prev) => prev.map((e) => e.id === editingEmployee.id ? { ...e, ...formData, updatedAt: new Date().toISOString() } as ExtendedEmployee : e));
+    setSaving(true);
+    setActionError(null);
+    const err = await updateEmployee(editingEmployee.id, formData);
+    setSaving(false);
+    if (err) { setActionError(err); return; }
     setIsEditModalOpen(false);
     setEditingEmployee(null);
   };
 
   const handleExportCSV = () => {
-    const rows = selectedIds.size > 0 ? localEmployees.filter((e) => selectedIds.has(e.id)) : filteredEmployees;
+    const rows = selectedIds.size > 0 ? liveEmployees.filter((e) => selectedIds.has(e.id)) : filteredEmployees;
     const csv = [
       ["Employee Code", "First Name", "Last Name", "Site", "Department", "Position", "Status", "Phone", "Email", "Gender"].join(","),
       ...rows.map((e) => [
@@ -395,12 +317,12 @@ export default function Employees() {
             <div>
               <div className="mb-4">
                 <Label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Employee Code</Label>
-                <Input value={isEdit ? (formData.code || "") : `MM-2024-${String(1000 + localEmployees.length + 1)}`} disabled className="h-[40px] bg-[#F5F5F5] text-[#9C9C9C] rounded-md text-[14px]" />
+                <Input value={isEdit ? (formData.code || "") : "Auto-generated on save"} disabled className="h-[40px] bg-[#F5F5F5] text-[#9C9C9C] rounded-md text-[14px]" />
               </div>
               <FormField label="Job Title" name="jobTitle" required />
               <FormField label="Department" name="department" type="select" options={DEPARTMENTS} required />
               <FormField label="Site" name="siteId" type="select" options={sites.map((s) => s.fullName)} required />
-              <FormField label="Employment Type" name="employeeType" type="select" options={["Permanent", "Contract", "Casual", "Intern"]} />
+              <FormField label="Employment Type" name="employeeType" type="select" options={["Permanent", "Contract", "Intern"]} />
             </div>
             <div>
               <FormField label="Job Grade" name="jobGrade" type="select" options={GRADES} />
@@ -447,6 +369,15 @@ export default function Employees() {
         </div>
       </div>
 
+      {error && (
+        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load employees: {error}</div>
+      )}
+      {actionError && (
+        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="ml-3 hover:text-[#991B1B]"><X className="w-4 h-4" /></button>
+        </div>
+      )}
       {/* ── Filter Bar ───────────────────────────────────────────────────── */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -459,7 +390,7 @@ export default function Employees() {
               className="pl-9 h-[36px] border-[#E5E4E0] text-[14px]"
             />
           </div>
-          <Select value={filters.siteIds.length === 1 ? String(filters.siteIds[0]) : filters.siteIds.length > 1 ? "multiple" : "all"} onValueChange={(v) => setFilters((p) => ({ ...p, siteIds: v === "all" || v === "multiple" ? [] : [Number(v)] }))}>
+          <Select value={filters.siteIds.length === 1 ? String(filters.siteIds[0]) : filters.siteIds.length > 1 ? "multiple" : "all"} onValueChange={(v) => setFilters((p) => ({ ...p, siteIds: v === "all" || v === "multiple" ? [] : [v] }))}>
             <SelectTrigger className="h-[36px] min-w-[160px] border-[#E5E4E0] text-[14px]"><SelectValue placeholder="All Sites" /></SelectTrigger>
             <SelectContent>{sites.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.fullName}</SelectItem>)}</SelectContent>
           </Select>
@@ -520,7 +451,7 @@ export default function Employees() {
           <span className="text-[13px] font-semibold">{selectedIds.size} employee{selectedIds.size > 1 ? "s" : ""} selected</span>
           <div className="w-px h-5 bg-white/30" />
           <button onClick={handleExportCSV} className="text-[13px] font-medium hover:underline flex items-center gap-1"><Download className="w-3.5 h-3.5" /> Export</button>
-          <button onClick={() => { const ids = Array.from(selectedIds); const toDelete = localEmployees.find((e) => ids[0] === e.id); if (toDelete) openDeleteModal(toDelete); }} className="text-[13px] font-medium hover:underline flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> Delete</button>
+          <button onClick={() => { const ids = Array.from(selectedIds); const toDelete = liveEmployees.find((e) => ids[0] === e.id); if (toDelete) openDeleteModal(toDelete); }} className="text-[13px] font-medium hover:underline flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> Archive</button>
         </div>
       )}
 
@@ -574,14 +505,22 @@ export default function Employees() {
                         <div className="flex items-center gap-1">
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#D4A017] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                           <button onClick={() => openEditModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#1E6BA3] transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => openDeleteModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#B91C1C] transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => openDeleteModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#B91C1C] transition-colors" title="Archive"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     )}
                   </tr>
                 );
               })}
-              {paginatedEmployees.length === 0 && (
+              {loading && (
+                <tr><td colSpan={11} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+                    <p className="text-[13px] text-[#9C9C9C]">Loading employees...</p>
+                  </div>
+                </td></tr>
+              )}
+              {!loading && paginatedEmployees.length === 0 && (
                 <tr><td colSpan={11} className="py-16 text-center text-[#9C9C9C]">
                   <div className="flex flex-col items-center gap-2">
                     <Search className="w-10 h-10 opacity-40" />
@@ -631,7 +570,7 @@ export default function Employees() {
           <EmployeeForm />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" onClick={handleSaveNew}>Create Employee</Button>
+            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveNew}>{saving ? "Creating..." : "Create Employee"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -643,7 +582,7 @@ export default function Employees() {
           <EmployeeForm isEdit />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" onClick={handleSaveEdit}>Save Changes</Button>
+            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveEdit}>{saving ? "Saving..." : "Save Changes"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -652,14 +591,14 @@ export default function Employees() {
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="max-w-[420px]">
           <DialogHeader>
-            <DialogTitle className="text-[20px] font-semibold text-[#B91C1C]">Delete Employee</DialogTitle>
+            <DialogTitle className="text-[20px] font-semibold text-[#B91C1C]">Archive Employee</DialogTitle>
             <DialogDescription className="text-[14px] text-[#525252]">
-              Are you sure you want to delete <strong>{deletingEmployee?.firstName} {deletingEmployee?.lastName}</strong>? This action cannot be undone.
+              Are you sure you want to archive <strong>{deletingEmployee?.firstName} {deletingEmployee?.lastName}</strong>? The record is retained (employees are never deleted) and can be viewed under the Archived status filter.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#B91C1C] hover:bg-[#991B1B] text-white" onClick={handleDelete}>Delete</Button>
+            <Button className="bg-[#B91C1C] hover:bg-[#991B1B] text-white" disabled={saving} onClick={handleDelete}>{saving ? "Archiving..." : "Archive"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -14,6 +14,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
+  /** True when the user arrived via a password-recovery link and must set a new password. */
+  isPasswordRecovery: boolean;
+  completePasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,6 +27,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => ({ error: "Auth not initialised" }),
   logout: async () => {},
+  isPasswordRecovery: false,
+  completePasswordRecovery: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [siteUuid, setSiteUuid] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const loadedForUserId = useRef<string | null>(null);
 
   const loadProfile = useCallback(async (session: Session | null): Promise<string | null> => {
@@ -86,7 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
       // Supabase warns against awaiting inside this callback; defer instead.
       setTimeout(() => { void loadProfile(session); }, 0);
     });
@@ -117,8 +124,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadedForUserId.current = null;
   }, []);
 
+  const completePasswordRecovery = useCallback(() => setIsPasswordRecovery(false), []);
+
   return (
-    <AuthContext.Provider value={{ user, currentRole, siteUuid, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, currentRole, siteUuid, isAuthenticated: !!user, isLoading, login, logout, isPasswordRecovery, completePasswordRecovery }}>
       {children}
     </AuthContext.Provider>
   );

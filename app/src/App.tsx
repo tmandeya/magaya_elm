@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 
 // Eager load login (first thing users see)
 import Login from "@/pages/Login";
+import ResetPassword from "@/pages/ResetPassword";
 
 // Lazy load all other pages for code splitting
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -42,8 +43,9 @@ function LoadingFallback() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isPasswordRecovery } = useAuth();
   if (isLoading) return <LoadingFallback />;
+  if (isPasswordRecovery) return <ResetPassword />;
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />

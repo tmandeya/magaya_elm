@@ -39,16 +39,6 @@ export default function Layout() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
       <div className={cn("flex-1 flex flex-col min-h-[100dvh] transition-all duration-300 ease-sidebar", collapsed ? "ml-sidebar-collapsed" : "ml-sidebar")}>
         <Topbar title={title} breadcrumb={breadcrumb} />
-        <div className="h-breadcrumb bg-[#FAFAF8] border-b border-[#E5E4E0] flex items-center px-6 shrink-0">
-          <nav className="flex items-center gap-1 text-[12px]">
-            {breadcrumb.map((crumb, index) => (
-              <span key={index} className="flex items-center gap-1">
-                {index > 0 && <span className="text-[#9C9C9C] mx-1">/</span>}
-                {crumb.path ? <a href={`#${crumb.path}`} className="text-[#D4A017] hover:underline">{crumb.label}</a> : <span className="text-[#1A1A1A] font-medium">{crumb.label}</span>}
-              </span>
-            ))}
-          </nav>
-        </div>
         <main className="flex-1 p-6 overflow-auto"><Outlet /></main>
         <Footer />
       </div>

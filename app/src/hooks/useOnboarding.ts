@@ -49,7 +49,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const WORKFLOW_SELECT = `
   id, workflow_type, status, notes, created_at, completed_at, initiated_by,
-  employees ( id, employee_id, full_name, photo_url, sites(name), departments(name) ),
+  employees!workflows_employee_id_fkey ( id, employee_id, full_name, photo_url, sites(name), departments(name) ),
   workflow_stages (
     id, stage_key, stage_label, stage_order, status, assigned_to_role,
     started_at, completed_at, completed_by, notes,

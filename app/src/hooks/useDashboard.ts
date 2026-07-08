@@ -70,11 +70,11 @@ export function useDashboard() {
       supabase.from("employees").select("status"),
       supabase.from("workflows").select(`
         id, workflow_type, status, created_at, completed_at, offboarding_deadline,
-        employees ( full_name ),
+        employees!workflows_employee_id_fkey ( full_name ),
         workflow_stages ( status )
       `).order("created_at", { ascending: false }),
       user
-        ? supabase.from("workflow_tasks").select("id, task_label, status, created_at, workflow_id, workflows(workflow_type, employees(full_name))").eq("assigned_to", user.id).in("status", ["pending", "in_progress"]).order("created_at", { ascending: false }).limit(10)
+        ? supabase.from("workflow_tasks").select("id, task_label, status, created_at, workflow_id, workflows(workflow_type, employees!workflows_employee_id_fkey(full_name))").eq("assigned_to", user.id).in("status", ["pending", "in_progress"]).order("created_at", { ascending: false }).limit(10)
         : Promise.resolve({ data: [], error: null }),
       supabase.from("v_site_headcount").select("*"),
     ]);

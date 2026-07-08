@@ -29,8 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
-import { mockOnboardingWorkflows, pendingEmployees, getOnboardingById } from "@/data/workflowData";
-import type { OnboardingWorkflow, OnboardingStage } from "@/types/workflow";
+import { useOnboarding, type LiveOnboardingWorkflow, type LiveTask, type OnboardingCandidate } from "@/hooks/useOnboarding";
 import {
   Plus,
   Search,
@@ -61,9 +60,13 @@ const STEPS = ["Select Employee", "Security Setup", "IT Provisioning", "Admin Se
 // ====================================================================
 
 function OnboardingList({
+  workflows,
+  loadError,
   onNewOnboarding,
   onViewDetail,
 }: {
+  workflows: LiveOnboardingWorkflow[];
+  loadError: string | null;
   onNewOnboarding: () => void;
   onViewDetail: (id: string) => void;
 }) {
@@ -71,7 +74,6 @@ function OnboardingList({
   const [siteFilter, setSiteFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [stageFilter, setStageFilter] = useState<string>("All");
-  const [workflows] = useState<OnboardingWorkflow[]>(mockOnboardingWorkflows);
 
   const filtered = useMemo(() => {
     return workflows.filter((w) => {
@@ -99,6 +101,9 @@ function OnboardingList({
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {loadError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load workflows: {loadError}</div>
+      )}
       {/* Page Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -342,51 +347,45 @@ function OnboardingList({
 function OnboardingDetail({
   workflow,
   onBack,
+  onTaskStatus,
 }: {
-  workflow: OnboardingWorkflow;
+  workflow: LiveOnboardingWorkflow;
   onBack: () => void;
+  onTaskStatus: (taskId: string, status: LiveTask["dbStatus"], notes?: string) => Promise<string | null>;
 }) {
   const [expandedStage, setExpandedStage] = useState<number | null>(
     workflow.stages.findIndex((s) => s.status === "in-progress")
   );
-  const [stages, setStages] = useState<OnboardingStage[]>(workflow.stages);
-  const [activityLog] = useState(workflow.activityLog);
+  const stages = workflow.stages;
+  const activityLog = workflow.activityLog;
   const [signOffStage, setSignOffStage] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleTaskToggle = (stageIndex: number, taskIndex: number) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      if (stage.tasks) {
-        const tasks = [...stage.tasks];
-        tasks[taskIndex] = { ...tasks[taskIndex], completed: !tasks[taskIndex].completed };
-        stage.tasks = tasks;
-      }
-      updated[stageIndex] = stage;
-      return updated;
-    });
+  const handleTaskToggle = async (stageIndex: number, taskIndex: number) => {
+    const task = stages[stageIndex]?.tasks?.[taskIndex];
+    if (!task || busy) return;
+    setBusy(true);
+    setActionError(null);
+    const err = await onTaskStatus(task.id, task.completed ? "pending" : "completed");
+    setBusy(false);
+    if (err) setActionError(err);
   };
 
-  const handleSignOff = (stageIndex: number, notes: string) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      stage.status = "completed";
-      stage.completedBy = "Current User";
-      stage.completedDate = new Date().toISOString().split("T")[0];
-      stage.notes = notes || "Stage signed off.";
-      updated[stageIndex] = stage;
-
-      // Advance next stage
-      if (stageIndex + 1 < updated.length) {
-        const next = { ...updated[stageIndex + 1] };
-        if (next.status === "pending") {
-          next.status = "in-progress";
-          updated[stageIndex + 1] = next;
-        }
+  const handleSignOff = async (stageIndex: number, notes: string) => {
+    const stage = stages[stageIndex];
+    if (!stage?.tasks || busy) return;
+    setBusy(true);
+    setActionError(null);
+    // Completing all open required tasks completes the stage server-side;
+    // the engine then advances the workflow, records the sign-off, and notifies.
+    for (const t of stage.tasks) {
+      if (t.required && !t.completed) {
+        const err = await onTaskStatus(t.id, "completed", notes || undefined);
+        if (err) { setActionError(err); setBusy(false); return; }
       }
-      return updated;
-    });
+    }
+    setBusy(false);
     setSignOffStage(null);
   };
 
@@ -413,6 +412,9 @@ function OnboardingDetail({
         <ChevronLeft className="w-4 h-4" />
         Back to Onboarding Hub
       </button>
+      {actionError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
+      )}
 
       {/* Header Card */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
@@ -624,10 +626,22 @@ function OnboardingDetail({
 function NewOnboardingWizard({
   open,
   onClose,
+  candidates,
+  hardwareOptions,
+  softwareOptions,
+  clearanceOptions,
+  onSubmit,
 }: {
   open: boolean;
   onClose: () => void;
+  candidates: OnboardingCandidate[];
+  hardwareOptions: string[];
+  softwareOptions: string[];
+  clearanceOptions: string[];
+  onSubmit: (input: { employeeId: string; notes?: string; hardware: string[]; software: string[]; clearanceLevel: string; vehicleCard: boolean; parking: boolean; adminNotes?: string }) => Promise<{ id: string | null; error: string | null }>;
 }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -637,12 +651,12 @@ function NewOnboardingWizard({
   // Step 1: Security
   const [needsIdCard, setNeedsIdCard] = useState(true);
   const [needsVehicleCard, setNeedsVehicleCard] = useState(false);
-  const [clearanceLevel, setClearanceLevel] = useState("Level 2");
+  const [clearanceLevel, setClearanceLevel] = useState("");
 
   // Step 2: IT
   const [m365Needed, setM365Needed] = useState(true);
-  const [selectedHardware, setSelectedHardware] = useState<string[]>(["Laptop"]);
-  const [selectedSoftware, setSelectedSoftware] = useState<string[]>(["Office 365"]);
+  const [selectedHardware, setSelectedHardware] = useState<string[]>([]);
+  const [selectedSoftware, setSelectedSoftware] = useState<string[]>([]);
 
   // Step 3: Admin
   const [parkingNeeded, setParkingNeeded] = useState(false);
@@ -660,14 +674,15 @@ function NewOnboardingWizard({
     setNotes("");
     setNeedsIdCard(true);
     setNeedsVehicleCard(false);
-    setClearanceLevel("Level 2");
+    setClearanceLevel("");
     setM365Needed(true);
-    setSelectedHardware(["Laptop"]);
-    setSelectedSoftware(["Office 365"]);
+    setSelectedHardware([]);
+    setSelectedSoftware([]);
     setParkingNeeded(false);
     setLockerNeeded(false);
     setInductionNeeded(true);
     setConfirmed(false);
+    setSubmitError(null);
   };
 
   const handleClose = () => {
@@ -675,7 +690,7 @@ function NewOnboardingWizard({
     onClose();
   };
 
-  const selectedEmpData = pendingEmployees.find((e) => e.id === selectedEmployee);
+  const selectedEmpData = candidates.find((e) => e.id === selectedEmployee);
 
   const toggleHardware = (item: string) => {
     setSelectedHardware((prev) =>
@@ -717,13 +732,16 @@ function NewOnboardingWizard({
                     <SelectValue placeholder="Choose a pending employee..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {pendingEmployees.map((emp) => (
+                    {candidates.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id} className="text-[13px]">
                         {emp.name} ({emp.code}) — {emp.site}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {candidates.length === 0 && (
+                  <p className="text-[12px] text-[#9C9C9C] mt-1.5">No employees are awaiting onboarding. Create the employee in Employee Master Data with status "Onboarding" first.</p>
+                )}
               </div>
 
               {selectedEmpData && (
@@ -815,7 +833,7 @@ function NewOnboardingWizard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["Level 1", "Level 2", "Level 3", "Level 4"].map((l) => (
+                    {clearanceOptions.map((l) => (
                       <SelectItem key={l} value={l} className="text-[13px]">
                         {l}
                       </SelectItem>
@@ -846,7 +864,7 @@ function NewOnboardingWizard({
                   Hardware Required
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {["Laptop", "Desktop", "Monitor", "Phone", "Printer", "Radio"].map((item) => (
+                  {hardwareOptions.map((item) => (
                     <button
                       key={item}
                       onClick={() => toggleHardware(item)}
@@ -868,7 +886,7 @@ function NewOnboardingWizard({
                   Software Required
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {["Office 365", "ERP", "Security Software", "AutoCAD", "SAP"].map((item) => (
+                  {softwareOptions.map((item) => (
                     <button
                       key={item}
                       onClick={() => toggleSoftware(item)}
@@ -992,6 +1010,9 @@ function NewOnboardingWizard({
           )}
         </div>
 
+        {submitError && (
+          <div className="mx-6 mb-2 px-4 py-3 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{submitError}</div>
+        )}
         <DialogFooter className="px-6 py-4 border-t border-[#E5E4E0]">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} className="text-[13px]">
@@ -1008,13 +1029,28 @@ function NewOnboardingWizard({
             </Button>
           ) : (
             <Button
-              onClick={() => {
+              onClick={async () => {
+                setSubmitting(true);
+                setSubmitError(null);
+                const adminNotes = `Parking: ${parkingNeeded ? "yes" : "no"}; Locker: ${lockerNeeded ? "yes" : "no"}; Induction: ${inductionNeeded ? "required" : "not required"}; M365 account: ${m365Needed ? "required" : "not required"}; ID card: ${needsIdCard ? "yes" : "no"}`;
+                const res = await onSubmit({
+                  employeeId: selectedEmployee,
+                  notes: [notes, expectedCompletion ? `Expected completion: ${expectedCompletion}` : "", `Start date: ${startDate}`].filter(Boolean).join(" | "),
+                  hardware: selectedHardware,
+                  software: selectedSoftware,
+                  clearanceLevel: clearanceLevel,
+                  vehicleCard: needsVehicleCard,
+                  parking: parkingNeeded,
+                  adminNotes,
+                });
+                setSubmitting(false);
+                if (res.error) { setSubmitError(res.error); return; }
                 handleClose();
               }}
-              disabled={!canProceed()}
+              disabled={!canProceed() || submitting}
               className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
             >
-              Submit & Initiate
+              {submitting ? "Initiating..." : "Submit & Initiate"}
             </Button>
           )}
         </DialogFooter>
@@ -1031,10 +1067,20 @@ export default function Onboarding() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, startOnboarding, setTaskStatus } = useOnboarding();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-3">
+        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <p className="text-[13px] text-[#9C9C9C]">Loading onboarding workflows...</p>
+      </div>
+    );
+  }
 
   // Detail view
   if (id) {
-    const workflow = getOnboardingById(id);
+    const workflow = workflows.find((w) => w.id === id);
     if (!workflow) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
@@ -1053,17 +1099,31 @@ export default function Onboarding() {
         </div>
       );
     }
-    return <OnboardingDetail workflow={workflow} onBack={() => navigate("/onboarding")} />;
+    return <OnboardingDetail workflow={workflow} onBack={() => navigate("/onboarding")} onTaskStatus={setTaskStatus} />;
   }
 
   // List view
   return (
     <>
       <OnboardingList
+        workflows={workflows}
+        loadError={error}
         onNewOnboarding={() => setWizardOpen(true)}
         onViewDetail={(workflowId) => navigate(`/onboarding/${workflowId}`)}
       />
-      <NewOnboardingWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <NewOnboardingWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        candidates={candidates}
+        hardwareOptions={hardwareOptions}
+        softwareOptions={softwareOptions}
+        clearanceOptions={clearanceOptions}
+        onSubmit={async (input) => {
+          const res = await startOnboarding(input);
+          if (res.id) navigate(`/onboarding/${res.id}`);
+          return res;
+        }}
+      />
     </>
   );
 }

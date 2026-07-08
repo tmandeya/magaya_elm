@@ -1,0 +1,95 @@
+// src/components/OffboardingLetter.tsx
+// Generic offboarding-completed letter, generated from live workflow data.
+// A4 print layout via @media print. Template wording is a working draft —
+// final wording is subject to Marketing & Communications approval.
+
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Printer, X } from "lucide-react";
+import type { LiveOffboardingWorkflow } from "@/hooks/useOffboarding";
+
+function fmt(d: string | null): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export default function OffboardingLetter({ workflow, open, onClose }: {
+  workflow: LiveOffboardingWorkflow;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-[820px] max-h-[90vh] overflow-y-auto p-0" aria-describedby={undefined}>
+        <style>{`
+          @media print {
+            body * { visibility: hidden !important; }
+            #offboarding-letter, #offboarding-letter * { visibility: visible !important; }
+            #offboarding-letter { position: fixed; inset: 0; width: 100%; padding: 0 !important; }
+            @page { size: A4; margin: 2cm; }
+          }
+        `}</style>
+        <div className="flex items-center justify-between px-6 py-3 border-b border-[#E5E4E0] print:hidden">
+          <span className="text-[14px] font-semibold text-[#1A1A1A]">Offboarding Completion Letter</span>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => window.print()} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[12px] h-8">
+              <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save as PDF
+            </Button>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-[#525252] hover:bg-[#FAFAF8]"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+
+        <div id="offboarding-letter" className="px-12 py-10 bg-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <div className="flex items-center justify-between mb-10 pb-6 border-b-2 border-[#1A1A1A]">
+            <img src="/magaya_logo.png" alt="Magaya Mining" className="h-[52px] w-auto" />
+            <div className="text-right text-[11px] text-[#525252] leading-relaxed">
+              <div className="text-[13px] font-bold text-[#1A1A1A]">Magaya Mining (Private) Limited</div>
+              <div>Head Office — Harare, Zimbabwe</div>
+              <div>Human Resources Department</div>
+            </div>
+          </div>
+
+          <div className="text-[13px] text-[#1A1A1A] leading-relaxed space-y-5">
+            <div className="text-right">{today}</div>
+
+            <div className="font-bold text-[15px] tracking-wide">TO WHOM IT MAY CONCERN</div>
+            <div className="font-semibold underline underline-offset-4">RE: CONFIRMATION OF SEPARATION — {workflow.employee.name.toUpperCase()} ({workflow.employee.code})</div>
+
+            <p>
+              This letter serves to confirm that <strong>{workflow.employee.name}</strong>
+              {workflow.letter.nationalId ? <> (National ID: {workflow.letter.nationalId})</> : null} was employed by
+              Magaya Mining (Private) Limited as <strong>{workflow.letter.jobTitle}</strong> in the {workflow.employee.department} department
+              at our {workflow.employee.site} operation
+              {workflow.letter.engagementDate ? <> from <strong>{fmt(workflow.letter.engagementDate)}</strong></> : null} until{" "}
+              <strong>{fmt(workflow.lastWorkingDate)}</strong>, their last working day.
+            </p>
+
+            <p>
+              The employee's offboarding process was completed on <strong>{fmt(workflow.letter.completedAt)}</strong>.
+              All departmental clearances — Information Technology, Security, and Administration — have been obtained,
+              and all company property, access cards, and equipment allocated to the employee have been returned and verified.
+            </p>
+
+            <p>
+              The company confirms that there are no outstanding clearance matters relating to this employee's separation.
+            </p>
+
+            <p>For any further information regarding this confirmation, please contact the Human Resources Department.</p>
+
+            <div className="pt-10 space-y-1">
+              <div className="w-[220px] border-b border-[#1A1A1A] h-10" />
+              <div className="font-semibold">Human Resources Department</div>
+              <div className="text-[12px] text-[#525252]">Magaya Mining (Private) Limited</div>
+            </div>
+
+            <div className="pt-8 text-[10px] text-[#9C9C9C] border-t border-[#E5E4E0] mt-8">
+              Generated by Magaya ELMS · Reference {workflow.reference} · This letter was produced upon completion of the formal offboarding workflow with full departmental sign-off.
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

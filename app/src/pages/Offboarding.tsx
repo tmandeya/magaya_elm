@@ -29,8 +29,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
-import { mockOffboardingWorkflows, activeEmployeesForOffboarding, getOffboardingById } from "@/data/workflowData";
-import type { OffboardingWorkflow, OffboardingStage } from "@/types/workflow";
+import { useOffboarding, type LiveOffboardingWorkflow, type OffboardingCandidate } from "@/hooks/useOffboarding";
+import type { LiveTask } from "@/hooks/useOnboarding";
+import OffboardingLetter from "@/components/OffboardingLetter";
 import {
   Plus,
   Search,
@@ -72,9 +73,13 @@ const OFFBOARDING_STEPS = ["Select Employee", "Clearance Requirements", "Review 
 // ====================================================================
 
 function OffboardingList({
+  workflows,
+  loadError,
   onNewOffboarding,
   onViewDetail,
 }: {
+  workflows: LiveOffboardingWorkflow[];
+  loadError: string | null;
   onNewOffboarding: () => void;
   onViewDetail: (id: string) => void;
 }) {
@@ -82,7 +87,6 @@ function OffboardingList({
   const [siteFilter, setSiteFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [stageFilter, setStageFilter] = useState<string>("All");
-  const [workflows] = useState<OffboardingWorkflow[]>(mockOffboardingWorkflows);
 
   const filtered = useMemo(() => {
     return workflows.filter((w) => {
@@ -109,6 +113,9 @@ function OffboardingList({
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {loadError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load workflows: {loadError}</div>
+      )}
       {/* Page Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -370,56 +377,50 @@ function OffboardingList({
 function OffboardingDetail({
   workflow,
   onBack,
+  onTaskStatus,
 }: {
-  workflow: OffboardingWorkflow;
+  workflow: LiveOffboardingWorkflow;
   onBack: () => void;
+  onTaskStatus: (taskId: string, status: LiveTask["dbStatus"], notes?: string) => Promise<string | null>;
 }) {
   const [expandedStage, setExpandedStage] = useState<number | null>(
     workflow.stages.findIndex((s) => s.status === "in-progress")
   );
-  const [stages, setStages] = useState<OffboardingStage[]>(workflow.stages);
-  const [activityLog] = useState(workflow.activityLog);
+  const stages = workflow.stages;
+  const activityLog = workflow.activityLog;
   const [signOffStage, setSignOffStage] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [letterOpen, setLetterOpen] = useState(false);
 
   const daysRemaining = Math.ceil(
     (new Date(workflow.lastWorkingDate).getTime() - Date.now()) / 86400000
   );
 
-  const handleTaskToggle = (stageIndex: number, taskIndex: number) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      if (stage.tasks) {
-        const tasks = [...stage.tasks];
-        tasks[taskIndex] = { ...tasks[taskIndex], completed: !tasks[taskIndex].completed };
-        stage.tasks = tasks;
-      }
-      updated[stageIndex] = stage;
-      return updated;
-    });
+  const handleTaskToggle = async (stageIndex: number, taskIndex: number) => {
+    const task = stages[stageIndex]?.tasks?.[taskIndex];
+    if (!task || busy) return;
+    setBusy(true);
+    setActionError(null);
+    const err = await onTaskStatus(task.id, task.completed ? "pending" : "completed");
+    setBusy(false);
+    if (err) setActionError(err);
   };
 
-  const handleSignOff = (stageIndex: number, notes: string) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      stage.status = "completed";
-      stage.completedBy = "Current User";
-      stage.completedDate = new Date().toISOString().split("T")[0];
-      stage.notes = notes || "Stage signed off.";
-      updated[stageIndex] = stage;
-
-      if (stageIndex + 1 < updated.length) {
-        const next = { ...updated[stageIndex + 1] };
-        if (next.status === "pending") {
-          next.status = "in-progress";
-          updated[stageIndex + 1] = next;
-        }
+  const handleSignOff = async (stageIndex: number, notes: string) => {
+    const stage = stages[stageIndex];
+    if (!stage?.tasks || busy) return;
+    setBusy(true);
+    setActionError(null);
+    for (const t of stage.tasks) {
+      if (t.required && !t.completed) {
+        const err = await onTaskStatus(t.id, "completed", notes || undefined);
+        if (err) { setActionError(err); setBusy(false); return; }
       }
-      return updated;
-    });
+    }
+    setBusy(false);
     setSignOffStage(null);
-  };
+  }
 
   const progressStages = stages.map((s) => ({
     name: s.name,
@@ -437,6 +438,18 @@ function OffboardingDetail({
         <ChevronLeft className="w-4 h-4" />
         Back to Offboarding Hub
       </button>
+      {actionError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
+      )}
+      {workflow.status === "Completed" && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 flex items-center justify-between">
+          <span className="text-[13px] text-[#1B7A43] font-medium">Offboarding complete — all departmental clearances obtained.</span>
+          <Button size="sm" onClick={() => setLetterOpen(true)} className="bg-[#1B7A43] hover:bg-[#14603a] text-white text-[12px] h-8">
+            <Download className="w-3.5 h-3.5 mr-1.5" /> Offboarding Letter
+          </Button>
+        </div>
+      )}
+      <OffboardingLetter workflow={workflow} open={letterOpen} onClose={() => setLetterOpen(false)} />
 
       {/* Header Card */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
@@ -670,7 +683,14 @@ function OffboardingDetail({
 // NEW OFFBOARDING WIZARD
 // ====================================================================
 
-function NewOffboardingWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+function NewOffboardingWizard({ open, onClose, candidates, onSubmit }: {
+  open: boolean;
+  onClose: () => void;
+  candidates: OffboardingCandidate[];
+  onSubmit: (input: { employeeId: string; terminationType: string; lastWorkingDay: string; reason?: string }) => Promise<{ id: string | null; error: string | null }>;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [terminationType, setTerminationType] = useState("");
@@ -713,7 +733,7 @@ function NewOffboardingWizard({ open, onClose }: { open: boolean; onClose: () =>
     onClose();
   };
 
-  const selectedEmpData = activeEmployeesForOffboarding.find((e) => e.id === selectedEmployee);
+  const selectedEmpData = candidates.find((e) => e.id === selectedEmployee);
 
   const canProceed = () => {
     if (step === 0) return selectedEmployee && terminationType && lastWorkingDate;
@@ -743,7 +763,7 @@ function NewOffboardingWizard({ open, onClose }: { open: boolean; onClose: () =>
                     <SelectValue placeholder="Choose an active employee..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {activeEmployeesForOffboarding.map((emp) => (
+                    {candidates.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id} className="text-[13px]">
                         {emp.name} ({emp.code}) — {emp.site}
                       </SelectItem>
@@ -945,6 +965,9 @@ function NewOffboardingWizard({ open, onClose }: { open: boolean; onClose: () =>
           )}
         </div>
 
+        {submitError && (
+          <div className="mx-6 mb-2 px-4 py-3 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{submitError}</div>
+        )}
         <DialogFooter className="px-6 py-4 border-t border-[#E5E4E0]">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} className="text-[13px]">
@@ -961,11 +984,23 @@ function NewOffboardingWizard({ open, onClose }: { open: boolean; onClose: () =>
             </Button>
           ) : (
             <Button
-              onClick={handleClose}
-              disabled={!canProceed()}
+              onClick={async () => {
+                setSubmitting(true);
+                setSubmitError(null);
+                const res = await onSubmit({
+                  employeeId: selectedEmployee,
+                  terminationType: terminationType,
+                  lastWorkingDay: lastWorkingDate,
+                  reason: reason || undefined,
+                });
+                setSubmitting(false);
+                if (res.error) { setSubmitError(res.error); return; }
+                handleClose();
+              }}
+              disabled={!canProceed() || submitting}
               className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
             >
-              Submit & Initiate
+              {submitting ? "Initiating..." : "Submit & Initiate"}
             </Button>
           )}
         </DialogFooter>
@@ -982,9 +1017,19 @@ export default function Offboarding() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { workflows, candidates, loading, error, startOffboarding, setTaskStatus } = useOffboarding();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-3">
+        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <p className="text-[13px] text-[#9C9C9C]">Loading offboarding workflows...</p>
+      </div>
+    );
+  }
 
   if (id) {
-    const workflow = getOffboardingById(id);
+    const workflow = workflows.find((w) => w.id === id);
     if (!workflow) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
@@ -1001,16 +1046,27 @@ export default function Offboarding() {
         </div>
       );
     }
-    return <OffboardingDetail workflow={workflow} onBack={() => navigate("/offboarding")} />;
+    return <OffboardingDetail workflow={workflow} onBack={() => navigate("/offboarding")} onTaskStatus={setTaskStatus} />;
   }
 
   return (
     <>
       <OffboardingList
+        workflows={workflows}
+        loadError={error}
         onNewOffboarding={() => setWizardOpen(true)}
         onViewDetail={(workflowId) => navigate(`/offboarding/${workflowId}`)}
       />
-      <NewOffboardingWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <NewOffboardingWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        candidates={candidates}
+        onSubmit={async (input) => {
+          const res = await startOffboarding(input);
+          if (res.id) navigate(`/offboarding/${res.id}`);
+          return res;
+        }}
+      />
     </>
   );
 }

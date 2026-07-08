@@ -293,21 +293,21 @@ export default function Employees() {
         <TabsContent value="personal" className="mt-0">
           <div className="grid grid-cols-2 gap-x-6">
             <div>
-              <FormField label="First Name" name="firstName" required />
-              <FormField label="Surname" name="lastName" required />
-              <FormField label="Date of Birth" name="dateOfBirth" type="date" />
-              <FormField label="Gender" name="gender" type="select" options={["Male", "Female", "Other"]} />
-              <FormField label="National ID" name="nationalId" placeholder="e.g. 88-1234567A88" />
-              <FormField label="Nationality" name="nationality" type="select" options={["Zimbabwean", "South African", "Zambian", "Botswanan", "Other"]} />
+              {FormField({ label: "First Name", name: "firstName", required: true })}
+              {FormField({ label: "Surname", name: "lastName", required: true })}
+              {FormField({ label: "Date of Birth", name: "dateOfBirth", type: "date" })}
+              {FormField({ label: "Gender", name: "gender", type: "select", options: ["Male", "Female", "Other"] })}
+              {FormField({ label: "National ID", name: "nationalId", placeholder: "e.g. 88-1234567A88" })}
+              {FormField({ label: "Nationality", name: "nationality", type: "select", options: ["Zimbabwean", "South African", "Zambian", "Botswanan", "Other"] })}
             </div>
             <div>
               <FormField label="Photo URL" name="photoUrl" placeholder="https://..." />
-              <FormField label="Home Address" name="homeAddress" type="textarea" placeholder="Full residential address" />
+              {FormField({ label: "Home Address", name: "homeAddress", type: "textarea", placeholder: "Full residential address" })}
               <div className="border-t border-[#E5E4E0] pt-3 mt-2">
                 <p className="text-[13px] font-semibold text-[#525252] mb-2">Emergency Contact</p>
-                <FormField label="Contact Name" name="emergencyContactName" />
-                <FormField label="Relationship" name="emergencyContactRelationship" />
-                <FormField label="Contact Phone" name="emergencyContactPhone" />
+                {FormField({ label: "Contact Name", name: "emergencyContactName" })}
+                {FormField({ label: "Relationship", name: "emergencyContactRelationship" })}
+                {FormField({ label: "Contact Phone", name: "emergencyContactPhone" })}
               </div>
             </div>
           </div>
@@ -319,30 +319,30 @@ export default function Employees() {
                 <Label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Employee Code</Label>
                 <Input value={isEdit ? (formData.code || "") : "Auto-generated on save"} disabled className="h-[40px] bg-[#F5F5F5] text-[#9C9C9C] rounded-md text-[14px]" />
               </div>
-              <FormField label="Job Title" name="jobTitle" required />
-              <FormField label="Department" name="department" type="select" options={DEPARTMENTS} required />
+              {FormField({ label: "Job Title", name: "jobTitle", required: true })}
+              {FormField({ label: "Department", name: "department", type: "select", options: DEPARTMENTS, required: true })}
               <FormField label="Site" name="siteId" type="select" options={sites.map((s) => s.fullName)} required />
-              <FormField label="Employment Type" name="employeeType" type="select" options={["Permanent", "Contract", "Intern"]} />
+              {FormField({ label: "Employment Type", name: "employeeType", type: "select", options: ["Permanent", "Contract", "Intern"] })}
             </div>
             <div>
-              <FormField label="Job Grade" name="jobGrade" type="select" options={GRADES} />
-              <FormField label="Contract Start Date" name="contractStart" type="date" />
-              <FormField label="Contract End Date" name="contractEnd" type="date" />
-              <FormField label="Status" name="status" type="select" options={STATUSES} required />
-              <FormField label="Cost Centre" name="costCentre" />
+              {FormField({ label: "Job Grade", name: "jobGrade", type: "select", options: GRADES })}
+              {FormField({ label: "Contract Start Date", name: "contractStart", type: "date" })}
+              {FormField({ label: "Contract End Date", name: "contractEnd", type: "date" })}
+              {FormField({ label: "Status", name: "status", type: "select", options: STATUSES, required: true })}
+              {FormField({ label: "Cost Centre", name: "costCentre" })}
             </div>
           </div>
         </TabsContent>
         <TabsContent value="contact" className="mt-0">
           <div className="grid grid-cols-2 gap-x-6">
             <div>
-              <FormField label="Work Email" name="email" type="email" required placeholder="name@magayamining.co.zw" />
-              <FormField label="Personal Email" name="personalEmail" type="email" />
-              <FormField label="Phone" name="phone" required placeholder="+263 77X XXX XXX" />
-              <FormField label="Years of Experience" name="yearsOfExperience" type="number" />
+              {FormField({ label: "Work Email", name: "email", type: "email", required: true, placeholder: "name@magayamining.co.zw" })}
+              {FormField({ label: "Personal Email", name: "personalEmail", type: "email" })}
+              {FormField({ label: "Phone", name: "phone", required: true, placeholder: "+263 77X XXX XXX" })}
+              {FormField({ label: "Years of Experience", name: "yearsOfExperience", type: "number" })}
             </div>
             <div>
-              <FormField label="Academic Qualifications" name="academicQualifications" type="textarea" />
+              {FormField({ label: "Academic Qualifications", name: "academicQualifications", type: "textarea" })}
             </div>
           </div>
         </TabsContent>
@@ -567,7 +567,7 @@ export default function Employees() {
       <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
         <DialogContent className="max-w-[800px] max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-[20px] font-semibold">Create New Employee Record</DialogTitle></DialogHeader>
-          <EmployeeForm />
+          {EmployeeForm({})}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewModalOpen(false)}>Cancel</Button>
             <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveNew}>{saving ? "Creating..." : "Create Employee"}</Button>
@@ -579,7 +579,7 @@ export default function Employees() {
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-w-[800px] max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-[20px] font-semibold">Edit Employee: {editingEmployee?.firstName} {editingEmployee?.lastName}</DialogTitle></DialogHeader>
-          <EmployeeForm isEdit />
+          {EmployeeForm({ isEdit: true })}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
             <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveEdit}>{saving ? "Saving..." : "Save Changes"}</Button>

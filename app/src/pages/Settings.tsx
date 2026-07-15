@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { List, Clock, Bell, Settings as SettingsIcon, Users, Shield, Plus, Pencil, EyeOff, Search, Save, RotateCcw, AlertTriangle, Check } from "lucide-react";
+import DataMigration from "@/components/DataMigration";
+import { List, Clock, Bell, Settings as SettingsIcon, Users, Shield, Plus, Pencil, EyeOff, Search, Save, RotateCcw, AlertTriangle, Check , Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +108,7 @@ const SECTION_FIELDS: Record<string, FieldDef[]> = {
 // ──────────────────────────────────────────────
 
 const tabs: TabDef[] = [
+  { key: "migration", label: "Data Migration", icon: Database },
   { key: "dropdowns", label: "Dropdown Config", icon: List },
   { key: "retention", label: "Retention Policy", icon: Clock },
   { key: "notifications", label: "Notifications", icon: Bell },
@@ -509,6 +511,11 @@ export default function Settings() {
         {/* Right Content Panel */}
         <div className="flex-1 min-w-0">
           {/* ════════ Tab 1: Dropdown Configuration ════════ */}
+          {activeTab === "migration" && (
+            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
+              <DataMigration />
+            </div>
+          )}
           {activeTab === "dropdowns" && (
             <div>
               <div className="mb-4">

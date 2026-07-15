@@ -5,7 +5,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
@@ -54,7 +54,8 @@ function excelDateToISO(v: unknown): string {
   return isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
 }
 
-interface ImportResult { inserted: number; updated: number; skipped: number; errors: { row: number; code: string; message: string }[] }
+interface RowIssue { row: number; code: string; message: string }
+interface ImportResult { inserted: number; updated: number; skipped: number; errors: RowIssue[]; warnings: RowIssue[] }
 
 export default function DataMigration() {
   const { sites } = useEmployees();
@@ -63,7 +64,6 @@ export default function DataMigration() {
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [unmappedHeaders, setUnmappedHeaders] = useState<string[]>([]);
   const [defaultSite, setDefaultSite] = useState("");
-  const [mode, setMode] = useState<"skip" | "update">("skip");
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -125,27 +125,52 @@ export default function DataMigration() {
     if (!defaultSite || rows.length === 0) return;
     setImporting(true);
     setProgress(0);
-    const totals: ImportResult = { inserted: 0, updated: 0, skipped: 0, errors: [] };
+    const totals: ImportResult = { inserted: 0, updated: 0, skipped: 0, errors: [], warnings: [] };
+
+    // Whole-file duplicate blocking (Employee ID + National ID) before batching,
+    // so a duplicate in a later batch cannot masquerade as an "existing" record.
+    const seenCodes = new Map<string, number>();
+    const seenNids = new Map<string, number>();
+    const unique: { row: Record<string, string>; fileRow: number }[] = [];
+    rows.forEach((r, idx) => {
+      const fileRow = idx + 1;
+      const code = r.code?.trim();
+      const nid = r.national_id?.trim();
+      if (code && seenCodes.has(code)) {
+        totals.errors.push({ row: fileRow, code, message: `Duplicate in file: Employee ID ${code} first appears at row ${seenCodes.get(code)}` });
+        return;
+      }
+      if (nid && seenNids.has(nid)) {
+        totals.errors.push({ row: fileRow, code: code ?? "?", message: `Duplicate in file: National ID first appears at row ${seenNids.get(nid)}` });
+        return;
+      }
+      if (code) seenCodes.set(code, fileRow);
+      if (nid) seenNids.set(nid, fileRow);
+      unique.push({ row: r, fileRow });
+    });
+
     const BATCH = 200;
-    for (let i = 0; i < rows.length; i += BATCH) {
-      const batch = rows.slice(i, i + BATCH);
+    for (let i = 0; i < unique.length; i += BATCH) {
+      const batch = unique.slice(i, i + BATCH);
       const { data, error } = await supabase.rpc("fn_import_employees", {
-        p_rows: batch,
+        p_rows: batch.map((b) => b.row),
         p_default_site_id: defaultSite,
-        p_mode: mode,
+        p_mode: "update",
       });
       if (error) {
-        totals.errors.push({ row: i + 1, code: "BATCH", message: error.message });
+        totals.errors.push({ row: batch[0].fileRow, code: "BATCH", message: error.message });
       } else if (data) {
         const d = data as ImportResult;
         totals.inserted += d.inserted;
         totals.updated += d.updated;
         totals.skipped += d.skipped;
-        // offset row numbers to file positions
-        totals.errors.push(...(d.errors ?? []).map((e) => ({ ...e, row: e.row + i })));
+        const toFileRow = (n: number) => batch[n - 1]?.fileRow ?? n;
+        totals.errors.push(...(d.errors ?? []).map((e) => ({ ...e, row: toFileRow(e.row) })));
+        totals.warnings.push(...(d.warnings ?? []).map((w) => ({ ...w, row: toFileRow(w.row) })));
       }
-      setProgress(Math.min(100, Math.round(((i + batch.length) / rows.length) * 100)));
+      setProgress(Math.min(100, Math.round(((i + batch.length) / unique.length) * 100)));
     }
+    totals.errors.sort((a, b) => a.row - b.row);
     setResult(totals);
     setImporting(false);
   };
@@ -215,15 +240,10 @@ export default function DataMigration() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">If an employee code already exists</label>
-              <Select value={mode} onValueChange={(v) => setMode(v as "skip" | "update")}>
-                <SelectTrigger className="h-[40px] text-[13px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="skip" className="text-[13px]">Skip the row (safe default)</SelectItem>
-                  <SelectItem value="update" className="text-[13px]">Update the existing record</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-end">
+              <p className="text-[12px] text-[#9C9C9C] leading-relaxed pb-1">
+                Duplicates are blocked on Employee ID and National ID. Records matching an existing employee are updated automatically.
+              </p>
             </div>
             <div className="flex items-end">
               <Button onClick={() => void runImport()} disabled={!defaultSite || importing} className="bg-[#1B7A43] hover:bg-[#14603a] text-white w-full h-[40px]">
@@ -256,12 +276,30 @@ export default function DataMigration() {
 
       {result && (
         <div className="space-y-3">
-          <div className="px-4 py-4 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-[#1B7A43]" />
-            <div className="text-[13px] text-[#1A1A1A]">
-              Import finished: <strong>{result.inserted} created</strong>, <strong>{result.updated} updated</strong>, <strong>{result.skipped} skipped</strong>, <strong className={result.errors.length ? "text-[#B91C1C]" : ""}>{result.errors.length} error{result.errors.length === 1 ? "" : "s"}</strong>.
+          <div className="grid grid-cols-3 gap-4">
+            <div className="px-4 py-4 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-center">
+              <div className="text-[26px] font-bold text-[#1B7A43]">{result.inserted}</div>
+              <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">New records added</div>
+            </div>
+            <div className="px-4 py-4 rounded-[10px] border border-[#1E6BA3]/30 bg-[#1E6BA3]/5 text-center">
+              <div className="text-[26px] font-bold text-[#1E6BA3]">{result.updated}</div>
+              <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">Updated</div>
+            </div>
+            <div className="px-4 py-4 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-center">
+              <div className="text-[26px] font-bold text-[#B91C1C]">{result.errors.length}</div>
+              <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">Failed</div>
             </div>
           </div>
+          {result.warnings.length > 0 && (
+            <div className="border border-[#C27A06]/30 rounded-[10px] overflow-hidden">
+              <div className="px-4 py-2 bg-[#FDF3E0] text-[13px] font-semibold text-[#C27A06]">Matched by National ID (updated, existing Employee ID kept)</div>
+              <div className="max-h-[180px] overflow-y-auto divide-y divide-[#E5E4E0]">
+                {result.warnings.map((w, i) => (
+                  <div key={i} className="px-4 py-2 text-[12px] text-[#1A1A1A]">Row {w.row} ({w.code}): <span className="text-[#C27A06]">{w.message}</span></div>
+                ))}
+              </div>
+            </div>
+          )}
           {result.errors.length > 0 && (
             <div className="border border-[#B91C1C]/30 rounded-[10px] overflow-hidden">
               <div className="px-4 py-2 bg-[#B91C1C]/5 text-[13px] font-semibold text-[#B91C1C]">Rows that could not be imported</div>

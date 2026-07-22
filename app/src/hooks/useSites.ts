@@ -4,7 +4,7 @@
 // numbers agree across sections by construction.
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAllRows } from "@/lib/supabase";
 
 export interface LiveSitePersonnel {
   [roleKey: string]: { name: string; code: string } | undefined;
@@ -50,7 +50,7 @@ export function useSites() {
     setError(null);
     const [siteRes, empRes, wfRes, cfgRes, kpRes, profRes] = await Promise.all([
       supabase.from("sites").select("id, code, name, location, address, is_active, created_at").order("name"),
-      supabase.from("employees").select("site_id, status, departments(name)"),
+      fetchAllRows("employees", "site_id, status, departments(name)"),
       supabase.from("workflows").select("site_id, workflow_type, status").eq("status", "in_progress"),
       supabase.from("site_config").select("site_id, enable_hod_signoff, enable_site_gm_signoff"),
       supabase.from("site_key_personnel").select("site_id, role_function, is_active, profiles(id, full_name, email)").eq("is_active", true),
@@ -63,7 +63,7 @@ export function useSites() {
     const deptBySite: Record<string, Record<string, number>> = {};
     const statusBySite: Record<string, Record<string, number>> = {};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const e of (empRes.data ?? []) as any[]) {
+    for (const e of (empRes.data ?? []) as any[]) { // fetchAllRows: full set, not capped
       if (!e.site_id) continue;
       empBySite[e.site_id] ??= { active: 0, total: 0 };
       if (e.status !== "archived") {

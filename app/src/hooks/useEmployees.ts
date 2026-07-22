@@ -4,7 +4,7 @@
 // user can see (can_see_site) and edit (is_hr_role/is_admin).
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, fetchAllRows } from "@/lib/supabase";
 import type { EmployeeStatus } from "@/types";
 
 // ── Shapes the UI consumes ──────────────────────────────────────────────────
@@ -168,11 +168,11 @@ export function useEmployees() {
   const refetch = useCallback(async () => {
     setError(null);
     const [empRes, siteRes, deptRes] = await Promise.all([
-      supabase.from("employees").select(EMPLOYEE_SELECT).order("surname", { ascending: true }),
+      fetchAllRows("employees", EMPLOYEE_SELECT, (q) => q.order("surname", { ascending: true })),
       supabase.from("sites").select("id, name, code").eq("is_active", true).order("name"),
       supabase.from("departments").select("id, name").order("name"),
     ]);
-    if (empRes.error) { setError(empRes.error.message); setLoading(false); return; }
+    if (empRes.error) { setError(empRes.error); setLoading(false); return; }
     setEmployees((empRes.data ?? []).map(mapRow));
     if (!siteRes.error) setSites((siteRes.data ?? []).map((s) => ({ id: s.id, name: s.name, fullName: s.name, code: s.code })));
     if (!deptRes.error) setDepartments(deptRes.data ?? []);

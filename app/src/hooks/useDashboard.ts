@@ -66,8 +66,12 @@ export function useDashboard() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const [empRes, wfRes, taskRes, headRes] = await Promise.all([
-      supabase.from("employees").select("status"),
+    const countByStatus = (status: string) =>
+      supabase.from("employees").select("id", { count: "exact", head: true }).eq("status", status);
+    const [activeRes, onbRes, offRes, wfRes, taskRes, headRes] = await Promise.all([
+      countByStatus("active"),
+      countByStatus("onboarding"),
+      countByStatus("offboarding"),
       supabase.from("workflows").select(`
         id, workflow_type, status, created_at, completed_at, offboarding_deadline,
         employees!workflows_employee_id_fkey ( full_name ),
@@ -79,11 +83,7 @@ export function useDashboard() {
       supabase.from("v_site_headcount").select("*"),
     ]);
 
-    if (empRes.error) { setError(empRes.error.message); setLoading(false); return; }
-
-    // KPIs from employee statuses (RLS-scoped)
-    const statusCounts: Record<string, number> = {};
-    for (const r of empRes.data ?? []) statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
+    if (activeRes.error) { setError(activeRes.error.message); setLoading(false); return; }
 
     // Workflow aggregates
     const wf = wfRes.data ?? [];
@@ -115,9 +115,9 @@ export function useDashboard() {
 
     const tasks = (taskRes.data ?? []) as unknown[];
     setKpi({
-      activeEmployees: statusCounts["active"] ?? 0,
-      onboardingInProgress: statusCounts["onboarding"] ?? 0,
-      offboardingPending: statusCounts["offboarding"] ?? 0,
+      activeEmployees: activeRes.count ?? 0,
+      onboardingInProgress: onbRes.count ?? 0,
+      offboardingPending: offRes.count ?? 0,
       transfersThisMonth,
       pendingApprovals: tasks.length,
     });

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus, Search, ChevronDown, ChevronUp, ChevronsUpDown, Download,
@@ -156,6 +156,9 @@ export default function Employees() {
     });
     return data;
   }, [liveEmployees, filters, sortField, sortDir]);
+
+  // Reset to page 1 whenever filters change (prevents stranded empty pages)
+  useEffect(() => { setPage(1); }, [filters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
   const paginatedEmployees = filteredEmployees.slice((page - 1) * pageSize, page * pageSize);

@@ -37,6 +37,30 @@ export async function getSession() {
   return session;
 }
 
+
+// ============================
+// FETCH ALL ROWS (beyond the 1,000-row PostgREST cap)
+// ============================
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function fetchAllRows<T = any>(
+  table: string,
+  select: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  modify?: (q: any) => any
+): Promise<{ data: T[]; error: string | null }> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let q = supabase.from(table).select(select).range(from, from + PAGE - 1);
+    if (modify) q = modify(q);
+    const { data, error } = await q;
+    if (error) return { data: all, error: error.message };
+    all.push(...((data ?? []) as T[]));
+    if (!data || data.length < PAGE) break;
+  }
+  return { data: all, error: null };
+}
+
 // ============================
 // PROFILES (v2 schema — auth-linked users)
 // ============================

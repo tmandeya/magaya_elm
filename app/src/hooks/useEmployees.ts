@@ -169,7 +169,7 @@ export function useEmployees() {
     setError(null);
     const [empRes, siteRes, deptRes] = await Promise.all([
       supabase.from("employees").select(EMPLOYEE_SELECT).order("surname", { ascending: true }),
-      supabase.from("sites").select("id, name, code").order("name"),
+      supabase.from("sites").select("id, name, code").eq("is_active", true).order("name"),
       supabase.from("departments").select("id, name").order("name"),
     ]);
     if (empRes.error) { setError(empRes.error.message); setLoading(false); return; }

@@ -50,8 +50,13 @@ function excelDateToISO(v: unknown): string {
     const d = new Date(Math.round((v - 25569) * 86400 * 1000));
     return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
   }
-  const d = new Date(String(v));
-  return isNaN(d.getTime()) ? String(v) : d.toISOString().slice(0, 10);
+  const s = String(v).trim();
+  // Text dates in HR exports are DD/MM/YYYY — parse explicitly, never via
+  // Date(string) which assumes MM/DD and silently swaps day and month.
+  const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s; // server-side fn_parse_date rejects anything unrecognised
 }
 
 interface RowIssue { row: number; code: string; message: string }

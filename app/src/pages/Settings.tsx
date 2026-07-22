@@ -1,699 +1,265 @@
-import { useState, useCallback } from "react";
-import DataMigration from "@/components/DataMigration";
-import { List, Clock, Bell, Settings as SettingsIcon, Users, Shield, Plus, Pencil, EyeOff, Search, Save, RotateCcw, AlertTriangle, Check , Database } from "lucide-react";
+// Settings: every tab is live against the database. No mock or local-only state.
+import { useMemo, useState } from "react";
+import { Database, Users as UsersIcon, List, Clock, Bell, Info, Plus, Loader2, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import {
-  mockDepartments,
-  mockJobTitles,
-  mockHardwareCatalog,
-  mockSoftwareList,
-  mockClearanceLevels,
-  mockDocumentTypes,
-  mockEmploymentTypes,
-  mockNationalities,
-  mockRetentionPolicies,
-  mockNotificationEvents,
-  mockSystemUsers,
-  type DropdownItem,
-  type HardwareItem,
-  type SoftwareItem,
-  type ClearanceLevelItem,
-  type DocumentTypeItem,
-  type RetentionPolicy,
-  type NotificationEvent,
-  type SystemUser,
-} from "@/data/adminData";
+import DataMigration from "@/components/DataMigration";
+import { useAdminSettings, type AdminUser, type LookupItem } from "@/hooks/useAdminSettings";
+import { useDashboard } from "@/hooks/useDashboard";
+import { ROLE_LABELS, DB_ROLE_TO_UI, type DbAppRole } from "@/types/db";
 
-// ──────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────
-
-interface TabDef { key: string; label: string; icon: React.ElementType; }
-
-interface FieldDef {
-  key: string;
-  label: string;
-  type: "text" | "select" | "number" | "checkbox" | "textarea";
-  options?: string[];
-  required?: boolean;
-}
-
-interface EditModalState {
-  open: boolean;
-  section: string;
-  index: number;
-  fields: FieldDef[];
-  values: Record<string, unknown>;
-}
-
-const INITIAL_EDIT: EditModalState = { open: false, section: "", index: -1, fields: [], values: {} };
-
-// ──────────────────────────────────────────────
-// Field schemas per dropdown section
-// ──────────────────────────────────────────────
-
-const SECTION_FIELDS: Record<string, FieldDef[]> = {
-  departments: [
-    { key: "name", label: "Department Name", type: "text", required: true },
-  ],
-  jobs: [
-    { key: "name", label: "Job Title", type: "text", required: true },
-    { key: "department", label: "Department", type: "text" },
-  ],
-  hardware: [
-    { key: "type", label: "Type", type: "text", required: true },
-    { key: "model", label: "Model", type: "text", required: true },
-    { key: "defaultSite", label: "Default Site", type: "text" },
-  ],
-  software: [
-    { key: "name", label: "Software Name", type: "text", required: true },
-    { key: "version", label: "Version", type: "text" },
-    { key: "licenseType", label: "License Type", type: "select", options: ["Enterprise", "Per-user", "Floating", "Free"] },
-  ],
-  clearance: [
-    { key: "name", label: "Level Name", type: "text", required: true },
-    { key: "description", label: "Description", type: "text" },
-    { key: "accessZones", label: "Access Zones (comma-separated)", type: "text" },
-  ],
-  docTypes: [
-    { key: "name", label: "Document Type", type: "text", required: true },
-    { key: "category", label: "Category", type: "select", options: ["Personal", "Medical", "Security", "Employment", "Academic"] },
-    { key: "expiryWarningDays", label: "Warning Days", type: "number" },
-    { key: "required", label: "Required", type: "checkbox" },
-  ],
-  empTypes: [
-    { key: "name", label: "Employment Type", type: "text", required: true },
-  ],
-  nationalities: [
-    { key: "name", label: "Nationality", type: "text", required: true },
-  ],
-  users: [
-    { key: "name", label: "Full Name", type: "text", required: true },
-    { key: "email", label: "Email", type: "text", required: true },
-    { key: "site", label: "Site", type: "text" },
-  ],
-};
-
-// ──────────────────────────────────────────────
-// Tab config
-// ──────────────────────────────────────────────
-
-const tabs: TabDef[] = [
+const TABS = [
   { key: "migration", label: "Data Migration", icon: Database },
+  { key: "users", label: "User Management", icon: UsersIcon },
   { key: "dropdowns", label: "Dropdown Config", icon: List },
   { key: "retention", label: "Retention Policy", icon: Clock },
   { key: "notifications", label: "Notifications", icon: Bell },
-  { key: "system", label: "System", icon: SettingsIcon },
-  { key: "users", label: "User Management", icon: Users },
-  { key: "security", label: "Security", icon: Shield },
+  { key: "system", label: "System", icon: Info },
 ];
 
-const retentionPeriods = ["Indefinite", "1 year", "3 years", "5 years", "7 years", "10 years", "Custom"];
+const DB_ROLES = Object.keys(DB_ROLE_TO_UI) as DbAppRole[];
+const roleLabel = (r: DbAppRole) => ROLE_LABELS[DB_ROLE_TO_UI[r]];
+const SITE_SCOPED_ROLES: DbAppRole[] = ["site_administrator", "site_hr", "site_security", "site_it_administrator"];
+const fmtDateTime = (d?: string | null) => (d ? new Date(d).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Never");
 
-function getSeverityBorder(severity: string) {
-  if (severity === "green") return "border-l-[#1B7A43]";
-  if (severity === "amber") return "border-l-[#C27A06]";
-  return "border-l-[#B91C1C]";
-}
-
-function getSeverityDot(severity: string) {
-  if (severity === "green") return "bg-[#1B7A43]";
-  if (severity === "amber") return "bg-[#C27A06]";
-  return "bg-[#B91C1C]";
-}
-
-// ──────────────────────────────────────────────
-// Sub-components
-// ──────────────────────────────────────────────
-
-interface DropdownSectionProps {
+function LookupSection({ title, items, onAdd, onToggle, addFields, busy }: {
   title: string;
-  icon: React.ElementType;
-  iconColor: string;
-  count: number;
-  children: React.ReactNode;
-}
-
-function DropdownSection({ title, icon: Icon, iconColor, count, children }: DropdownSectionProps) {
+  items: LookupItem[];
+  onAdd: (values: Record<string, string>) => Promise<void>;
+  onToggle: (id: string, active: boolean) => Promise<void>;
+  addFields: { key: string; placeholder: string; select?: { id: string; name: string }[] }[];
+  busy: boolean;
+}) {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [showInactive, setShowInactive] = useState(false);
+  const visible = items.filter((i) => showInactive || i.isActive);
   return (
-    <AccordionItem value={title.toLowerCase().replace(/\s/g, "-")} className="border border-[#E5E4E0] rounded-lg mb-3 overflow-hidden">
-      <AccordionTrigger className="px-4 py-3 hover:no-underline bg-[#FAFAF8] [&[data-state=open]]:rounded-b-none">
-        <div className="flex items-center gap-3 flex-1">
-          <Icon className="w-[18px] h-[18px]" style={{ color: iconColor }} />
-          <span className="text-[14px] font-semibold text-[#1A1A1A]">{title}</span>
-          <Badge variant="outline" className="bg-[rgba(212,160,23,0.1)] text-[#D4A017] border-0 text-[11px]">{count}</Badge>
-        </div>
-      </AccordionTrigger>
-      <AccordionContent className="p-4 border-t border-[#E5E4E0]">
-        {children}
-      </AccordionContent>
-    </AccordionItem>
-  );
-}
-
-interface InlineTableProps {
-  columns: string[];
-  rows: (string | React.ReactNode)[][];
-  onEdit?: (rowIndex: number) => void;
-  onToggleStatus?: (rowIndex: number) => void;
-  showToggle?: boolean;
-}
-
-function InlineTable({ columns, rows, onEdit, onToggleStatus, showToggle = true }: InlineTableProps) {
-  return (
-    <div className="border border-[#E5E4E0] rounded-lg overflow-hidden">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-[#FAFAF8] border-b border-[#E5E4E0]">
-            {columns.map((col) => (
-              <th key={col} className="text-left px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">{col}</th>
-            ))}
-            {(onEdit || onToggleStatus) && <th className="w-[80px]"></th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[#E5E4E0] hover:bg-[#FAFAF8]" style={{ height: "44px" }}>
-              {row.map((cell, j) => (
-                <td key={j} className="px-3 py-2 text-[13px] text-[#1A1A1A]">{cell}</td>
-              ))}
-              {(onEdit || onToggleStatus) && (
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-1">
-                    {onEdit && (
-                      <Button variant="ghost" size="icon" className="w-7 h-7 text-[#9C9C9C] hover:text-[#D4A017]" onClick={() => onEdit(i)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    {onToggleStatus && showToggle && (
-                      <Button variant="ghost" size="icon" className="w-7 h-7 text-[#9C9C9C] hover:text-[#B91C1C]" onClick={() => onToggleStatus(i)}>
-                        <EyeOff className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              )}
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={columns.length + ((onEdit || onToggleStatus) ? 1 : 0)} className="text-center py-6 text-[#9C9C9C] text-[13px]">No items found</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[14px] font-semibold text-[#1A1A1A]">{title} <span className="text-[#9C9C9C] font-normal">({items.filter((i) => i.isActive).length} active)</span></h3>
+        <label className="flex items-center gap-2 text-[12px] text-[#737373]"><Switch checked={showInactive} onCheckedChange={setShowInactive} /> Show inactive</label>
+      </div>
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {addFields.map((f) => f.select ? (
+          <Select key={f.key} value={values[f.key] ?? ""} onValueChange={(v) => setValues((p) => ({ ...p, [f.key]: v }))}>
+            <SelectTrigger className="h-[36px] text-[13px] w-[200px]"><SelectValue placeholder={f.placeholder} /></SelectTrigger>
+            <SelectContent>{f.select.map((o) => <SelectItem key={o.id} value={o.id} className="text-[13px]">{o.name}</SelectItem>)}</SelectContent>
+          </Select>
+        ) : (
+          <Input key={f.key} value={values[f.key] ?? ""} onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder} className="h-[36px] text-[13px] w-[200px]" />
+        ))}
+        <Button size="sm" disabled={busy || !addFields.every((f) => f.select ? true : (values[f.key] ?? "").trim() || f.key.startsWith("_opt_"))}
+          onClick={async () => { await onAdd(values); setValues({}); }}
+          className="h-[36px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
+      </div>
+      <div className="max-h-[260px] overflow-y-auto divide-y divide-[#F0EFEB] border-t border-[#F0EFEB]">
+        {visible.map((i) => (
+          <div key={i.id} className="flex items-center justify-between py-2">
+            <div>
+              <span className={cn("text-[13px]", i.isActive ? "text-[#1A1A1A]" : "text-[#9C9C9C] line-through")}>{i.label}</span>
+              {i.sub && <span className="text-[11px] text-[#9C9C9C] ml-2">{i.sub}</span>}
+            </div>
+            <Switch checked={i.isActive} disabled={busy} onCheckedChange={(v) => void onToggle(i.id, v)} />
+          </div>
+        ))}
+        {visible.length === 0 && <p className="py-4 text-center text-[12px] text-[#9C9C9C]">Nothing here</p>}
+      </div>
     </div>
   );
 }
 
-// ──────────────────────────────────────────────
-// Main component
-// ──────────────────────────────────────────────
-
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState("dropdowns");
-  const [hasChanges, setHasChanges] = useState(false);
-  const [saveToast, setSaveToast] = useState(false);
+  const [tab, setTab] = useState("migration");
+  const s = useAdminSettings();
+  const { workflowStats } = useDashboard();
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // User management state
   const [userSearch, setUserSearch] = useState("");
-  const [userRoleFilter, setUserRoleFilter] = useState("All");
-  const [userStatusFilter, setUserStatusFilter] = useState("All");
+  const [userDialog, setUserDialog] = useState<"add" | "edit" | null>(null);
+  const [editing, setEditing] = useState<AdminUser | null>(null);
+  const [uEmail, setUEmail] = useState("");
+  const [uName, setUName] = useState("");
+  const [uPhone, setUPhone] = useState("");
+  const [uRole, setURole] = useState<DbAppRole | "">("");
+  const [uSite, setUSite] = useState<string>("");
 
-  // ── Dropdown data (all mutable) ──
-  const [depts, setDepts] = useState<DropdownItem[]>(mockDepartments);
-  const [jobs, setJobs] = useState<DropdownItem[]>(mockJobTitles);
-  const [hardware, setHardware] = useState<HardwareItem[]>(mockHardwareCatalog);
-  const [software, setSoftware] = useState<SoftwareItem[]>(mockSoftwareList);
-  const [clearance, setClearance] = useState<ClearanceLevelItem[]>(mockClearanceLevels);
-  const [docTypes, setDocTypes] = useState<DocumentTypeItem[]>(mockDocumentTypes);
-  const [empTypes, setEmpTypes] = useState<DropdownItem[]>(mockEmploymentTypes);
-  const [nationalities, setNationalities] = useState<DropdownItem[]>(mockNationalities);
-  const [retentionPolicies] = useState<RetentionPolicy[]>(mockRetentionPolicies);
-  const [notifEvents, setNotifEvents] = useState<NotificationEvent[]>(mockNotificationEvents);
-  const [users, setUsers] = useState<SystemUser[]>(mockSystemUsers);
+  const [retentionAll, setRetentionAll] = useState("");
 
-  // ── Add department inline ──
-  const [addingDept, setAddingDept] = useState(false);
-  const [newDeptName, setNewDeptName] = useState("");
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase();
+    return s.users.filter((u) => !q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  }, [s.users, userSearch]);
 
-  // ── Edit modal ──
-  const [edit, setEdit] = useState<EditModalState>(INITIAL_EDIT);
+  const openAdd = () => { setUEmail(""); setUName(""); setUPhone(""); setURole(""); setUSite(""); setEditing(null); setUserDialog("add"); setActionError(null); };
+  const openEdit = (u: AdminUser) => { setEditing(u); setUName(u.fullName); setUPhone(u.phone ?? ""); setURole(u.role); setUSite(u.siteId ?? ""); setUserDialog("edit"); setActionError(null); };
 
-  // ──────────────────────────────────────────────
-  // Helpers: get setter + data by section key
-  // ──────────────────────────────────────────────
-
-  const sectionMap: Record<string, { data: any[]; setter: (fn: (prev: any[]) => any[]) => void }> = {
-    departments: { data: depts, setter: setDepts },
-    jobs: { data: jobs, setter: setJobs },
-    hardware: { data: hardware, setter: setHardware },
-    software: { data: software, setter: setSoftware },
-    clearance: { data: clearance, setter: setClearance },
-    docTypes: { data: docTypes, setter: setDocTypes },
-    empTypes: { data: empTypes, setter: setEmpTypes },
-    nationalities: { data: nationalities, setter: setNationalities },
-    users: { data: users, setter: setUsers as any },
+  const submitUser = async () => {
+    if (!uName.trim() || !uRole) return;
+    const needsSite = SITE_SCOPED_ROLES.includes(uRole as DbAppRole);
+    if (needsSite && !uSite) { setActionError("Site-scoped roles require a site."); return; }
+    setBusy(true);
+    setActionError(null);
+    const err = userDialog === "add"
+      ? await s.createUser({ email: uEmail.trim(), fullName: uName.trim(), role: uRole as DbAppRole, siteId: uSite || null, phone: uPhone.trim() || undefined })
+      : await s.updateUser(editing!.id, { fullName: uName.trim(), role: uRole as DbAppRole, siteId: uSite || null, phone: uPhone.trim() || undefined });
+    setBusy(false);
+    if (err) { setActionError(err); return; }
+    if (userDialog === "add") setNotice(`User created. Tell them to open the login page, use "Forgot password" with ${uEmail.trim()}, and set their own password.`);
+    setUserDialog(null);
   };
 
-  // ──────────────────────────────────────────────
-  // Edit modal handlers
-  // ──────────────────────────────────────────────
-
-  const openEdit = useCallback((section: string, index: number) => {
-    const fields = SECTION_FIELDS[section] || [];
-    const item = sectionMap[section]?.data[index];
-    if (!item) return;
-
-    const values: Record<string, unknown> = {};
-    for (const f of fields) {
-      const raw = item[f.key];
-      // Convert arrays to comma-separated for text fields
-      values[f.key] = Array.isArray(raw) ? raw.join(", ") : raw ?? "";
-    }
-    setEdit({ open: true, section, index, fields, values });
-  }, [depts, jobs, hardware, software, clearance, docTypes, empTypes, nationalities, users]);
-
-  function updateEditValue(key: string, value: unknown) {
-    setEdit((prev) => ({ ...prev, values: { ...prev.values, [key]: value } }));
-  }
-
-  function saveEdit() {
-    const { section, index, values } = edit;
-    const entry = sectionMap[section];
-    if (!entry) return;
-
-    entry.setter((prev: any[]) =>
-      prev.map((item: any, i: number) => {
-        if (i !== index) return item;
-        const updated = { ...item };
-        for (const [k, v] of Object.entries(values)) {
-          // Convert comma-separated strings back to arrays for accessZones
-          if (k === "accessZones" && typeof v === "string") {
-            updated[k] = v.split(",").map((s: string) => s.trim()).filter(Boolean);
-          } else if (k === "expiryWarningDays") {
-            updated[k] = Number(v) || 0;
-          } else {
-            updated[k] = v;
-          }
-        }
-        return updated;
-      })
+  if (s.loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-3">
+        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <p className="text-[13px] text-[#9C9C9C]">Loading settings...</p>
+      </div>
     );
-    setHasChanges(true);
-    setEdit(INITIAL_EDIT);
   }
-
-  // ──────────────────────────────────────────────
-  // Toggle status (Active ↔ Inactive)
-  // ──────────────────────────────────────────────
-
-  function toggleStatus(section: string, index: number) {
-    const entry = sectionMap[section];
-    if (!entry) return;
-    entry.setter((prev: any[]) =>
-      prev.map((item: any, i: number) =>
-        i === index ? { ...item, status: item.status === "Active" ? "Inactive" : "Active" } : item
-      )
-    );
-    setHasChanges(true);
-  }
-
-  // ──────────────────────────────────────────────
-  // Notification helpers
-  // ──────────────────────────────────────────────
-
-  function toggleNotifChannel(eventId: number, channel: keyof NotificationEvent) {
-    setNotifEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, [channel]: !e[channel] } : e));
-    setHasChanges(true);
-  }
-
-  function toggleAllNotifChannel(channel: keyof NotificationEvent, value: boolean) {
-    setNotifEvents((prev) => prev.map((e) => ({ ...e, [channel]: value })));
-    setHasChanges(true);
-  }
-
-  // ──────────────────────────────────────────────
-  // Add department
-  // ──────────────────────────────────────────────
-
-  function addDept() {
-    if (!newDeptName.trim()) return;
-    setDepts((prev) => [...prev, { id: prev.length + 1, name: newDeptName, status: "Active" }]);
-    setNewDeptName("");
-    setAddingDept(false);
-    setHasChanges(true);
-  }
-
-  // ──────────────────────────────────────────────
-  // Save / Reset
-  // ──────────────────────────────────────────────
-
-  function handleSave() {
-    // TODO: persist to Supabase when wired up
-    setHasChanges(false);
-    setSaveToast(true);
-    setTimeout(() => setSaveToast(false), 2500);
-  }
-
-  function handleReset() {
-    setDepts(mockDepartments);
-    setJobs(mockJobTitles);
-    setHardware(mockHardwareCatalog);
-    setSoftware(mockSoftwareList);
-    setClearance(mockClearanceLevels);
-    setDocTypes(mockDocumentTypes);
-    setEmpTypes(mockEmploymentTypes);
-    setNationalities(mockNationalities);
-    setNotifEvents(mockNotificationEvents);
-    setUsers(mockSystemUsers);
-    setHasChanges(false);
-  }
-
-  // ──────────────────────────────────────────────
-  // User Management filters
-  // ──────────────────────────────────────────────
-
-  const filteredUsers = users.filter((u) => {
-    if (userSearch && !u.name.toLowerCase().includes(userSearch.toLowerCase()) && !u.email.toLowerCase().includes(userSearch.toLowerCase())) return false;
-    if (userRoleFilter !== "All" && u.roleLabel !== userRoleFilter) return false;
-    if (userStatusFilter !== "All" && u.status !== userStatusFilter) return false;
-    return true;
-  });
-
-  // ──────────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────────
 
   return (
-    <div className="p-6 space-y-5">
-      {/* ── Save toast ── */}
-      {saveToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-[#1B7A43] text-white px-4 py-2.5 rounded-lg shadow-lg text-[13px] font-medium animate-in fade-in slide-in-from-top-2">
-          <Check className="w-4 h-4" /> Settings saved successfully
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Settings</h1>
+        <p className="text-[13px] text-[#525252] mt-1">System configuration and administrative preferences</p>
+      </div>
+
+      {s.error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{s.error}</div>}
+      {notice && (
+        <div className="px-4 py-3 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-[13px] text-[#1B7A43] flex items-center justify-between">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} className="text-[12px] font-medium">Dismiss</button>
         </div>
       )}
 
-      {/* ── Edit Modal ── */}
-      <Dialog open={edit.open} onOpenChange={(open) => !open && setEdit(INITIAL_EDIT)}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle className="text-[16px] font-semibold text-[#1A1A1A]">
-              Edit {edit.section.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            {edit.fields.map((field) => (
-              <div key={field.key}>
-                <label className="text-[13px] font-medium text-[#525252] block mb-1.5">{field.label}</label>
-                {field.type === "text" && (
-                  <Input
-                    value={String(edit.values[field.key] ?? "")}
-                    onChange={(e) => updateEditValue(field.key, e.target.value)}
-                    className="h-[40px] text-[13px] border-[#E5E4E0]"
-                    required={field.required}
-                  />
-                )}
-                {field.type === "number" && (
-                  <Input
-                    type="number"
-                    value={String(edit.values[field.key] ?? "")}
-                    onChange={(e) => updateEditValue(field.key, e.target.value)}
-                    className="h-[40px] text-[13px] border-[#E5E4E0] w-[120px]"
-                  />
-                )}
-                {field.type === "select" && (
-                  <Select value={String(edit.values[field.key] ?? "")} onValueChange={(v) => updateEditValue(field.key, v)}>
-                    <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options?.map((opt) => (
-                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {field.type === "checkbox" && (
-                  <div className="flex items-center gap-2 pt-1">
-                    <Checkbox
-                      checked={!!edit.values[field.key]}
-                      onCheckedChange={(v) => updateEditValue(field.key, !!v)}
-                      className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]"
-                    />
-                    <span className="text-[13px] text-[#1A1A1A]">Yes</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="h-[36px] text-[13px]" onClick={() => setEdit(INITIAL_EDIT)}>
-              Cancel
-            </Button>
-            <Button className="h-[36px] text-[13px] bg-[#D4A017] hover:bg-[#A67C0A] text-white" onClick={saveEdit}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Page Header ── */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] leading-tight tracking-[-0.02em]">Settings</h1>
-          <p className="text-[13px] text-[#525252] mt-1">System configuration and administrative preferences</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="h-[40px] text-[13px] gap-2 text-[#B91C1C] border-[#B91C1C] hover:bg-[#FEF2F2]" onClick={handleReset}>
-            <RotateCcw className="w-4 h-4" /> Reset
-          </Button>
-          <Button
-            disabled={!hasChanges}
-            className={cn("h-[40px] text-[13px] gap-2 text-white", hasChanges ? "bg-[#D4A017] hover:bg-[#A67C0A]" : "bg-[#E5E4E0] text-[#9C9C9C]")}
-            onClick={handleSave}
-          >
-            <Save className="w-4 h-4" /> Save Changes
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Settings Layout: Left tabs + Right content ── */}
-      <div className="flex gap-4">
-        {/* Left Tab Panel */}
-        <div className="w-[220px] shrink-0 bg-white rounded-[10px] border border-[#E5E4E0] p-2 self-start">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all duration-150 mb-0.5",
-                  active ? "bg-[rgba(212,160,23,0.1)] text-[#D4A017] border-l-[3px] border-[#D4A017]" : "text-[#525252] hover:bg-[#FAFAF8] border-l-[3px] border-transparent"
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
+      <div className="flex gap-5 items-start flex-col lg:flex-row">
+        <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-2 w-full lg:w-[220px] shrink-0">
+          {TABS.map((t) => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-left",
+                tab === t.key ? "bg-[#FDF6E3] text-[#A67C0A] border-l-2 border-[#D4A017]" : "text-[#525252] hover:bg-[#FAFAF8]")}>
+              <t.icon className="w-4 h-4" /> {t.label}
+            </button>
+          ))}
         </div>
 
-        {/* Right Content Panel */}
-        <div className="flex-1 min-w-0">
-          {/* ════════ Tab 1: Dropdown Configuration ════════ */}
-          {activeTab === "migration" && (
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {tab === "migration" && (
+            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6"><DataMigration /></div>
+          )}
+
+          {tab === "users" && (
             <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
-              <DataMigration />
-            </div>
-          )}
-          {activeTab === "dropdowns" && (
-            <div>
-              <div className="mb-4">
-                <h2 className="text-[20px] font-semibold text-[#1A1A1A]">Dropdown Configuration</h2>
-                <p className="text-[12px] text-[#525252]">Manage values for all system dropdowns</p>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <div>
+                  <h2 className="text-[18px] font-semibold text-[#1A1A1A]">User Management</h2>
+                  <p className="text-[12px] text-[#525252]">Platform users, their roles and site scope. New users set their own password via "Forgot password".</p>
+                </div>
+                <Button onClick={openAdd} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"><Plus className="w-4 h-4 mr-1.5" /> Add User</Button>
               </div>
-              <Accordion type="multiple" className="w-full">
-                {/* Departments */}
-                <DropdownSection title="Departments" icon={List} iconColor="#1E6BA3" count={depts.length}>
-                  <InlineTable
-                    columns={["#", "Department Name", "Status"]}
-                    rows={depts.map((d) => [
-                      String(d.id),
-                      d.name,
-                      <Badge key={d.id} variant="outline" className={cn("text-[11px] border-0", d.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{d.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("departments", i)}
-                    onToggleStatus={(i) => toggleStatus("departments", i)}
-                  />
-                  {addingDept ? (
-                    <div className="flex items-center gap-2 mt-3">
-                      <Input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="Department name" className="h-[32px] text-[13px] border-[#E5E4E0]" onKeyDown={(e) => e.key === "Enter" && addDept()} />
-                      <Button size="sm" className="h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[12px]" onClick={addDept}>Save</Button>
-                      <Button size="sm" variant="outline" className="h-[32px] text-[12px]" onClick={() => { setAddingDept(false); setNewDeptName(""); }}>Cancel</Button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setAddingDept(true)} className="flex items-center gap-1 mt-3 text-[13px] text-[#D4A017] font-medium hover:underline">
-                      <Plus className="w-4 h-4" /> Add Department
-                    </button>
-                  )}
-                </DropdownSection>
-
-                {/* Job Titles */}
-                <DropdownSection title="Job Titles" icon={List} iconColor="#7C3AED" count={jobs.length}>
-                  <InlineTable
-                    columns={["#", "Job Title", "Department", "Status"]}
-                    rows={jobs.map((j) => [
-                      String(j.id),
-                      j.name,
-                      (j as Record<string, unknown>).department as string || "—",
-                      <Badge key={j.id} variant="outline" className={cn("text-[11px] border-0", j.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{j.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("jobs", i)}
-                    onToggleStatus={(i) => toggleStatus("jobs", i)}
-                  />
-                </DropdownSection>
-
-                {/* Hardware Catalog */}
-                <DropdownSection title="Hardware Catalog" icon={List} iconColor="#166534" count={hardware.length}>
-                  <InlineTable
-                    columns={["#", "Hardware Type", "Model", "Default Site", "Status"]}
-                    rows={hardware.map((h) => [
-                      String(h.id),
-                      h.type,
-                      h.model,
-                      h.defaultSite,
-                      <Badge key={h.id} variant="outline" className={cn("text-[11px] border-0", h.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{h.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("hardware", i)}
-                    onToggleStatus={(i) => toggleStatus("hardware", i)}
-                  />
-                </DropdownSection>
-
-                {/* Software List */}
-                <DropdownSection title="Software List" icon={List} iconColor="#1D4ED8" count={software.length}>
-                  <InlineTable
-                    columns={["#", "Software Name", "Version", "License Type", "Status"]}
-                    rows={software.map((s) => [
-                      String(s.id),
-                      s.name,
-                      s.version,
-                      s.licenseType,
-                      <Badge key={s.id} variant="outline" className={cn("text-[11px] border-0", s.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{s.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("software", i)}
-                    onToggleStatus={(i) => toggleStatus("software", i)}
-                  />
-                </DropdownSection>
-
-                {/* Clearance Levels */}
-                <DropdownSection title="Clearance Levels" icon={List} iconColor="#C27A06" count={clearance.length}>
-                  <InlineTable
-                    columns={["#", "Level", "Description", "Access Zones", "Status"]}
-                    rows={clearance.map((c) => [
-                      String(c.id),
-                      c.name,
-                      c.description,
-                      c.accessZones.join(", "),
-                      <Badge key={c.id} variant="outline" className={cn("text-[11px] border-0", c.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{c.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("clearance", i)}
-                    onToggleStatus={(i) => toggleStatus("clearance", i)}
-                  />
-                </DropdownSection>
-
-                {/* Document Types */}
-                <DropdownSection title="Document Types" icon={List} iconColor="#B91C1C" count={docTypes.length}>
-                  <InlineTable
-                    columns={["#", "Document Type", "Category", "Warning (days)", "Required", "Status"]}
-                    rows={docTypes.map((d) => [
-                      String(d.id),
-                      d.name,
-                      d.category,
-                      String(d.expiryWarningDays),
-                      d.required ? <Check className="w-4 h-4 text-[#1B7A43]" /> : "—",
-                      <Badge key={d.id} variant="outline" className={cn("text-[11px] border-0", d.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{d.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("docTypes", i)}
-                    onToggleStatus={(i) => toggleStatus("docTypes", i)}
-                  />
-                </DropdownSection>
-
-                {/* Employment Types */}
-                <DropdownSection title="Employment Types" icon={List} iconColor="#1E6BA3" count={empTypes.length}>
-                  <InlineTable
-                    columns={["#", "Type", "Status"]}
-                    rows={empTypes.map((e) => [
-                      String(e.id),
-                      e.name,
-                      <Badge key={e.id} variant="outline" className={cn("text-[11px] border-0", e.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{e.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("empTypes", i)}
-                    onToggleStatus={(i) => toggleStatus("empTypes", i)}
-                  />
-                </DropdownSection>
-
-                {/* Nationalities */}
-                <DropdownSection title="Nationalities" icon={List} iconColor="#6D28D9" count={nationalities.length}>
-                  <InlineTable
-                    columns={["#", "Nationality", "Status"]}
-                    rows={nationalities.map((n) => [
-                      String(n.id),
-                      n.name,
-                      <Badge key={n.id} variant="outline" className={cn("text-[11px] border-0", n.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{n.status}</Badge>,
-                    ])}
-                    onEdit={(i) => openEdit("nationalities", i)}
-                    onToggleStatus={(i) => toggleStatus("nationalities", i)}
-                  />
-                </DropdownSection>
-              </Accordion>
+              <div className="relative mb-4 max-w-[320px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C9C9C]" />
+                <Input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search users..." className="pl-9 h-[38px] text-[13px]" />
+              </div>
+              <div className="border border-[#E5E4E0] rounded-[10px] overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead className="bg-[#FAFAF8]">
+                    <tr>
+                      {["User", "Role", "Site", "Status", "Last Login", "Actions"].map((h) => (
+                        <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5E4E0]">
+                    {filteredUsers.map((u) => (
+                      <tr key={u.id}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-[#D4A017] text-white text-[12px] font-semibold flex items-center justify-center shrink-0">
+                              {u.fullName.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-medium text-[#1A1A1A]">{u.fullName}</div>
+                              <div className="text-[11px] text-[#9C9C9C]">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-[#E8F2FA] text-[#1E6BA3] text-[11px] font-semibold">{roleLabel(u.role)}</span></td>
+                        <td className="px-4 py-3 text-[#525252]">{u.siteName ?? "All Sites"}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold", u.isActive ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{u.isActive ? "Active" : "Disabled"}</span>
+                        </td>
+                        <td className="px-4 py-3 text-[#737373] text-[12px]">{fmtDateTime(u.lastLoginAt)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => openEdit(u)} className="text-[#1E6BA3] hover:underline text-[12px] font-medium flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
+                            <button disabled={busy} onClick={async () => { setBusy(true); const err = await s.setUserActive(u.id, !u.isActive); setBusy(false); if (err) setActionError(err); }}
+                              className={cn("text-[12px] font-medium hover:underline", u.isActive ? "text-[#B91C1C]" : "text-[#1B7A43]")}>{u.isActive ? "Disable" : "Enable"}</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredUsers.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-[#9C9C9C]">No users found</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {/* ════════ Tab 2: Retention Policy ════════ */}
-          {activeTab === "retention" && (
-            <div>
-              <div className="mb-4">
-                <h2 className="text-[20px] font-semibold text-[#1A1A1A]">Data Retention Policy</h2>
-                <p className="text-[12px] text-[#525252]">Configure how long different data types are retained</p>
+          {tab === "dropdowns" && (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <LookupSection title="Departments" items={s.departments} busy={busy}
+                addFields={[{ key: "name", placeholder: "Department name" }, { key: "code", placeholder: "Code (e.g. GEO)" }]}
+                onAdd={async (v) => { setBusy(true); const err = await s.addLookup("departments", { name: v.name?.trim(), code: v.code?.trim().toUpperCase() }); setBusy(false); if (err) setActionError(err); }}
+                onToggle={async (id, a) => { const err = await s.toggleLookup("departments", id, a); if (err) setActionError(err); }} />
+              <LookupSection title="Job Titles" items={s.jobTitles} busy={busy}
+                addFields={[{ key: "title", placeholder: "Job title" }, { key: "department_id", placeholder: "Department (optional)", select: s.departments.filter((d) => d.isActive).map((d) => ({ id: d.id, name: d.label })) }]}
+                onAdd={async (v) => { setBusy(true); const err = await s.addLookup("jobTitles", { title: v.title?.trim(), department_id: v.department_id || null }); setBusy(false); if (err) setActionError(err); }}
+                onToggle={async (id, a) => { const err = await s.toggleLookup("jobTitles", id, a); if (err) setActionError(err); }} />
+              <LookupSection title="Hardware Catalog" items={s.hardware} busy={busy}
+                addFields={[{ key: "category", placeholder: "Category (e.g. Laptop)" }, { key: "make", placeholder: "Make" }, { key: "model", placeholder: "Model" }]}
+                onAdd={async (v) => { setBusy(true); const err = await s.addLookup("hardware", { category: v.category?.trim(), make: v.make?.trim(), model: v.model?.trim() }); setBusy(false); if (err) setActionError(err); }}
+                onToggle={async (id, a) => { const err = await s.toggleLookup("hardware", id, a); if (err) setActionError(err); }} />
+              <LookupSection title="Software Catalog" items={s.software} busy={busy}
+                addFields={[{ key: "name", placeholder: "Software name" }, { key: "license_type", placeholder: "License type" }]}
+                onAdd={async (v) => { setBusy(true); const err = await s.addLookup("software", { name: v.name?.trim(), license_type: v.license_type?.trim() || null }); setBusy(false); if (err) setActionError(err); }}
+                onToggle={async (id, a) => { const err = await s.toggleLookup("software", id, a); if (err) setActionError(err); }} />
+              <LookupSection title="Security Clearance Levels" items={s.clearance} busy={busy}
+                addFields={[{ key: "name", placeholder: "Level name" }, { key: "description", placeholder: "Description" }]}
+                onAdd={async (v) => { setBusy(true); const err = await s.addLookup("clearance", { name: v.name?.trim(), description: v.description?.trim() || null, sort_order: s.clearance.length + 1 }); setBusy(false); if (err) setActionError(err); }}
+                onToggle={async (id, a) => { const err = await s.toggleLookup("clearance", id, a); if (err) setActionError(err); }} />
+            </div>
+          )}
+
+          {tab === "retention" && (
+            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
+              <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Retention Policy</h2>
+              <p className="text-[12px] text-[#525252] mb-4">Days a departed employee's record stays in Former Employees before archive eligibility. Configured per site in the workflow engine.</p>
+              <div className="flex items-center gap-2 mb-5">
+                <Input value={retentionAll} onChange={(e) => setRetentionAll(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 90" className="h-[38px] w-[120px] text-[13px]" />
+                <Button size="sm" disabled={busy || !retentionAll}
+                  onClick={async () => { setBusy(true); const err = await s.saveRetention("all", Number(retentionAll)); setBusy(false); if (err) setActionError(err); else { setNotice(`Retention set to ${retentionAll} days for all sites.`); setRetentionAll(""); } }}
+                  className="h-[38px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">Apply to all sites</Button>
               </div>
-              <div className="flex items-start gap-3 bg-[#FDF3E0] border border-[#C27A06] rounded-lg p-4 mb-5">
-                <AlertTriangle className="w-[18px] h-[18px] text-[#C27A06] shrink-0 mt-0.5" />
-                <p className="text-[13px] text-[#C27A06]">Changes to retention policies affect all historical data. Consult legal compliance before modifying.</p>
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {retentionPolicies.map((policy) => (
-                  <div key={policy.id} className={cn("bg-white rounded-lg border border-[#E5E4E0] p-4 border-l-[3px]", getSeverityBorder(policy.severity))}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={cn("w-2 h-2 rounded-full", getSeverityDot(policy.severity))} />
-                          <span className="text-[14px] font-semibold text-[#1A1A1A]">{policy.dataType}</span>
-                        </div>
-                        <p className="text-[12px] text-[#525252] mb-2">{policy.description}</p>
-                        <div className="flex items-center gap-3">
-                          <Select defaultValue={policy.period} onValueChange={() => setHasChanges(true)}>
-                            <SelectTrigger className="w-[180px] h-[32px] text-[12px] border-[#E5E4E0]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {retentionPeriods.map((p) => (
-                                <SelectItem key={p} value={p.toLowerCase().replace(/\s/g, "-")}>{p}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <span className="text-[11px] text-[#9C9C9C]">Last changed: {policy.lastChanged.split("T")[0]} by {policy.changedBy}</span>
-                        </div>
-                      </div>
+              <div className="border border-[#E5E4E0] rounded-[10px] divide-y divide-[#E5E4E0] max-h-[420px] overflow-y-auto">
+                {s.retention.map((r) => (
+                  <div key={r.siteId} className="flex items-center justify-between px-4 py-2.5">
+                    <span className="text-[13px] text-[#1A1A1A]">{r.siteName}</span>
+                    <div className="flex items-center gap-2">
+                      <Input defaultValue={String(r.retentionDays)} onBlur={async (e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v) || v === r.retentionDays || v < 0) return;
+                        const err = await s.saveRetention(r.siteId, v);
+                        if (err) setActionError(err);
+                      }} className="h-[32px] w-[90px] text-[13px] text-right" />
+                      <span className="text-[12px] text-[#9C9C9C]">days</span>
                     </div>
                   </div>
                 ))}
@@ -701,370 +267,105 @@ export default function Settings() {
             </div>
           )}
 
-          {/* ════════ Tab 3: Notification Preferences ════════ */}
-          {activeTab === "notifications" && (
-            <div>
-              <div className="mb-4">
-                <h2 className="text-[20px] font-semibold text-[#1A1A1A]">Notification Preferences</h2>
-                <p className="text-[12px] text-[#525252]">Configure who receives notifications and for what events</p>
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                <div className="col-span-3 bg-white rounded-lg border border-[#E5E4E0] overflow-hidden">
-                  <div className="grid grid-cols-5 gap-0 border-b border-[#E5E4E0] bg-[#FAFAF8] px-4 py-2.5">
-                    <div className="col-span-2 text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Event</div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252] text-center">In-App</div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252] text-center">Email</div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252] text-center">SMS</div>
-                  </div>
-                  {notifEvents.map((event) => (
-                    <div key={event.id} className="grid grid-cols-5 gap-0 px-4 py-2.5 border-b border-[#E5E4E0] hover:bg-[#FAFAF8]">
-                      <div className="col-span-2 text-[13px] text-[#1A1A1A]">{event.event}</div>
-                      <div className="flex justify-center">
-                        <Checkbox checked={event.inApp} disabled className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" />
-                      </div>
-                      <div className="flex justify-center">
-                        <Checkbox checked={event.email} onCheckedChange={() => toggleNotifChannel(event.id, "email")} className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" />
-                      </div>
-                      <div className="flex justify-center">
-                        <Checkbox checked={event.sms} onCheckedChange={() => toggleNotifChannel(event.id, "sms")} className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" />
-                      </div>
-                    </div>
-                  ))}
-                  <div className="flex items-center gap-4 px-4 py-2.5 bg-[#FAFAF8]">
-                    <span className="text-[12px] text-[#525252]">Toggle all:</span>
-                    <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#D4A017]" onClick={() => toggleAllNotifChannel("email", true)}>Email On</Button>
-                    <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#737373]" onClick={() => toggleAllNotifChannel("email", false)}>Email Off</Button>
-                    <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#D4A017]" onClick={() => toggleAllNotifChannel("sms", true)}>SMS On</Button>
-                    <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#737373]" onClick={() => toggleAllNotifChannel("sms", false)}>SMS Off</Button>
-                  </div>
-                </div>
+          {tab === "notifications" && (
+            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6 max-w-[560px]">
+              <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Notifications</h2>
+              <p className="text-[12px] text-[#525252] mb-5">Which notifications you receive is decided by your role and site — the workflow engine routes them. Here you choose how you receive yours.</p>
+              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Delivery preference</label>
+              <Select value={s.notifPref} onValueChange={async (v) => { const err = await s.saveNotifPref(v); if (err) setActionError(err); else setNotice("Notification preference saved."); }}>
+                <SelectTrigger className="h-[40px] text-[13px] w-[260px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_app" className="text-[13px]">In-app only</SelectItem>
+                  <SelectItem value="email" className="text-[13px]">Email only</SelectItem>
+                  <SelectItem value="both" className="text-[13px]">In-app and email</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-[#9C9C9C] mt-3">Email delivery requires the company SMTP configuration (pending M365 integration).</p>
+            </div>
+          )}
 
-                <div className="col-span-2 space-y-4">
-                  <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
-                    <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-3">Notification Settings</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-[12px] font-medium text-[#525252] block mb-1">Email sender name</label>
-                        <Input defaultValue="Magaya Mining ELMS" className="h-[36px] text-[13px] border-[#E5E4E0]" onChange={() => setHasChanges(true)} />
-                      </div>
-                      <div>
-                        <label className="text-[12px] font-medium text-[#525252] block mb-1">Email footer</label>
-                        <Textarea defaultValue="This is an automated message from Magaya Mining ELMS." className="min-h-[60px] text-[13px] border-[#E5E4E0]" onChange={() => setHasChanges(true)} />
-                      </div>
-                      <div>
-                        <label className="text-[12px] font-medium text-[#525252] block mb-1">Digest frequency</label>
-                        <Select defaultValue="daily" onValueChange={() => setHasChanges(true)}>
-                          <SelectTrigger className="h-[36px] text-[13px] border-[#E5E4E0]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="never">Never</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-[12px] font-medium text-[#525252] block mb-1">Digest time</label>
-                        <Input type="time" defaultValue="08:00" className="h-[36px] text-[13px] border-[#E5E4E0]" onChange={() => setHasChanges(true)} />
-                      </div>
-                      <div>
-                        <label className="text-[12px] font-medium text-[#525252] block mb-1">Max retries</label>
-                        <Input type="number" defaultValue={3} className="h-[36px] text-[13px] border-[#E5E4E0] w-[80px]" onChange={() => setHasChanges(true)} />
-                      </div>
-                    </div>
+          {tab === "system" && (
+            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
+              <h2 className="text-[18px] font-semibold text-[#1A1A1A] mb-4">System</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Platform Users", value: s.users.length },
+                  { label: "Active Users", value: s.users.filter((u) => u.isActive).length },
+                  { label: "Workflows In Progress", value: workflowStats.inProgress },
+                  { label: "Workflows Completed", value: workflowStats.completed },
+                ].map((c) => (
+                  <div key={c.label} className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] p-4">
+                    <div className="text-[22px] font-bold text-[#1A1A1A]">{c.value}</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#9C9C9C] mt-1">{c.label}</div>
                   </div>
-                  <Button variant="outline" size="sm" className="w-full text-[12px] h-[36px]">
-                    Send Test Notification
-                  </Button>
-                </div>
+                ))}
+              </div>
+              <div className="mt-5 text-[12px] text-[#737373] space-y-1">
+                <p>Application: Magaya ELMS v2 · Backend: Supabase (magaya-elm_platform, eu-west-2) · Hosting: Vercel</p>
+                <p>Authentication: email/password with recovery · Access control: role-based, database-enforced (RLS)</p>
               </div>
             </div>
           )}
 
-          {/* ════════ Tab 4: System Settings ════════ */}
-          {activeTab === "system" && (
-            <div className="space-y-5">
-              <div className="mb-4">
-                <h2 className="text-[20px] font-semibold text-[#1A1A1A]">System Settings</h2>
-                <p className="text-[12px] text-[#525252]">General system configuration</p>
-              </div>
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">General</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">System Name</label>
-                    <Input defaultValue="Magaya Mining ELMS" className="h-[40px] text-[13px] border-[#E5E4E0]" onChange={() => setHasChanges(true)} />
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Timezone</label>
-                    <Select defaultValue="harare" onValueChange={() => setHasChanges(true)}>
-                      <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="harare">Africa/Harare</SelectItem>
-                        <SelectItem value="johannesburg">Africa/Johannesburg</SelectItem>
-                        <SelectItem value="london">Europe/London</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Format</label>
-                    <Select defaultValue="ddmmyyyy" onValueChange={() => setHasChanges(true)}>
-                      <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ddmmyyyy">DD/MM/YYYY</SelectItem>
-                        <SelectItem value="mmddyyyy">MM/DD/YYYY</SelectItem>
-                        <SelectItem value="yyyymmdd">YYYY-MM-DD</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Currency</label>
-                    <Select defaultValue="usd" onValueChange={() => setHasChanges(true)}>
-                      <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="usd">USD</SelectItem>
-                        <SelectItem value="zwl">ZWL</SelectItem>
-                        <SelectItem value="zar">ZAR</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Branding</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Company Logo</label>
-                    <div className="border-2 border-dashed border-[#E5E4E0] rounded-lg p-6 text-center hover:border-[#D4A017] hover:bg-[rgba(212,160,23,0.03)] transition-colors cursor-pointer">
-                      <div className="text-[12px] text-[#525252]">Drag & drop or click to upload</div>
-                      <div className="text-[11px] text-[#9C9C9C] mt-1">PNG, JPG up to 2MB</div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Primary Color</label>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#D4A017] border border-[#E5E4E0] cursor-pointer" title="Gold" />
-                      <div className="w-10 h-10 rounded-lg bg-[#1E6BA3] border border-[#E5E4E0] cursor-pointer" title="Blue" />
-                      <div className="w-10 h-10 rounded-lg bg-[#1B7A43] border border-[#E5E4E0] cursor-pointer" title="Green" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Default Page Size</label>
-                    <Select defaultValue="25" onValueChange={() => setHasChanges(true)}>
-                      <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0] w-[120px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="10">10</SelectItem>
-                        <SelectItem value="25">25</SelectItem>
-                        <SelectItem value="50">50</SelectItem>
-                        <SelectItem value="100">100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Backup & Maintenance</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Switch defaultChecked />
-                    <span className="text-[13px] text-[#1A1A1A]">Auto-backup</span>
-                    <Select defaultValue="daily">
-                      <SelectTrigger className="h-[32px] text-[12px] border-[#E5E4E0] w-[120px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Switch />
-                    <span className="text-[13px] text-[#1A1A1A]">Maintenance mode</span>
-                    <span className="text-[11px] text-[#B91C1C]">(Danger - restricts access)</span>
-                  </div>
-                  <p className="text-[12px] text-[#9C9C9C]">Last backup: 2024-01-28 03:00 AM</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ════════ Tab 5: User Management ════════ */}
-          {activeTab === "users" && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-[20px] font-semibold text-[#1A1A1A]">User Management</h2>
-                  <p className="text-[12px] text-[#525252]">Manage system users and their roles</p>
-                </div>
-                <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white h-[36px] text-[13px] gap-2">
-                  <Plus className="w-4 h-4" /> Add User
-                </Button>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C9C]" />
-                  <Input placeholder="Search users..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="pl-9 w-[200px] h-[36px] text-[13px] border-[#E5E4E0]" />
-                </div>
-                <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
-                  <SelectTrigger className="w-[150px] h-[36px] text-[13px] border-[#E5E4E0]"><SelectValue placeholder="Role" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Roles</SelectItem>
-                    {Array.from(new Set(users.map((u) => u.roleLabel))).map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={userStatusFilter} onValueChange={setUserStatusFilter}>
-                  <SelectTrigger className="w-[140px] h-[36px] text-[13px] border-[#E5E4E0]"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="bg-white rounded-lg border border-[#E5E4E0] overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[#FAFAF8] border-b border-[#E5E4E0]">
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">User</th>
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Role</th>
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Site</th>
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Status</th>
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Last Login</th>
-                      <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((u) => {
-                      // Find the real index in the full users array for editing
-                      const realIndex = users.findIndex((usr) => usr.id === u.id);
-                      return (
-                        <tr key={u.id} className="border-b border-[#E5E4E0] hover:bg-[#FAFAF8]" style={{ height: "52px" }}>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[11px] font-semibold">
-                                {u.name.split(" ").map((n) => n[0]).join("")}
-                              </div>
-                              <div>
-                                <div className="text-[13px] font-medium text-[#1A1A1A]">{u.name}</div>
-                                <div className="text-[11px] text-[#9C9C9C]">{u.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="text-[11px] border-0 bg-[#E8F2FA] text-[#1E6BA3]">{u.roleLabel}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-[13px] text-[#525252]">{u.site}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className={cn("text-[11px] border-0", u.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{u.status}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-[12px] text-[#9C9C9C]">{u.lastLogin ? u.lastLogin.replace("T", " ").substring(0, 16) : "—"}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#D4A017]" onClick={() => openEdit("users", realIndex)}>Edit</Button>
-                              <Button variant="ghost" size="sm" className="h-[28px] text-[11px] text-[#B91C1C]" onClick={() => toggleStatus("users", realIndex)}>
-                                {u.status === "Active" ? "Disable" : "Enable"}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {filteredUsers.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="text-center py-8 text-[#9C9C9C]">No users found</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ════════ Tab 6: Security Settings ════════ */}
-          {activeTab === "security" && (
-            <div className="space-y-5">
-              <div className="mb-4">
-                <h2 className="text-[20px] font-semibold text-[#1A1A1A]">Security Settings</h2>
-                <p className="text-[12px] text-[#525252]">Password policy, session management, and access control</p>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Password Policy</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Minimum Length</label>
-                    <Input type="number" defaultValue={8} className="h-[40px] text-[13px] border-[#E5E4E0] w-[80px]" onChange={() => setHasChanges(true)} />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox defaultChecked className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" onCheckedChange={() => setHasChanges(true)} />
-                      <span className="text-[13px] text-[#1A1A1A]">Require uppercase letter</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox defaultChecked className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" onCheckedChange={() => setHasChanges(true)} />
-                      <span className="text-[13px] text-[#1A1A1A]">Require lowercase letter</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox defaultChecked className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" onCheckedChange={() => setHasChanges(true)} />
-                      <span className="text-[13px] text-[#1A1A1A]">Require number</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox className="data-[state=checked]:bg-[#D4A017] data-[state=checked]:border-[#D4A017]" onCheckedChange={() => setHasChanges(true)} />
-                      <span className="text-[13px] text-[#1A1A1A]">Require special character</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Session & Login</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Session Timeout</label>
-                    <Select defaultValue="30" onValueChange={() => setHasChanges(true)}>
-                      <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Max Login Attempts</label>
-                    <Input type="number" defaultValue={5} className="h-[40px] text-[13px] border-[#E5E4E0] w-[80px]" onChange={() => setHasChanges(true)} />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Switch onCheckedChange={() => setHasChanges(true)} />
-                    <span className="text-[13px] text-[#1A1A1A]">Require 2FA</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">IP Whitelist</h3>
-                <Textarea placeholder={"Enter one IP per line...\n192.168.1.0/24\n10.0.0.0/8"} className="min-h-[100px] text-[13px] border-[#E5E4E0] font-mono" onChange={() => setHasChanges(true)} />
-                <p className="text-[11px] text-[#9C9C9C] mt-2">Leave empty to allow all IPs. One IP or CIDR range per line.</p>
-              </div>
-
-              <div className="bg-white rounded-lg border border-[#E5E4E0] p-5">
-                <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">API Keys</h3>
-                <div className="flex items-center gap-3">
-                  <Input defaultValue="magaya_prod_••••••••••••a3f8" readOnly className="h-[40px] text-[13px] border-[#E5E4E0] bg-[#FAFAF8] font-mono flex-1" type="password" />
-                  <Button variant="outline" size="sm" className="h-[36px] text-[12px]">Show</Button>
-                  <Button variant="outline" size="sm" className="h-[36px] text-[12px] text-[#B91C1C] border-[#B91C1C] hover:bg-[#FEF2F2]">Regenerate</Button>
-                </div>
-              </div>
+          {actionError && (
+            <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+              <span>{actionError}</span>
+              <button onClick={() => setActionError(null)} className="text-[12px] font-medium">Dismiss</button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Add / Edit user dialog */}
+      <Dialog open={userDialog !== null} onOpenChange={(o) => !o && setUserDialog(null)}>
+        <DialogContent className="max-w-[480px]" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle className="text-[18px]">{userDialog === "add" ? "Add User" : "Edit User"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            {userDialog === "add" && (
+              <div>
+                <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Email *</label>
+                <Input value={uEmail} onChange={(e) => setUEmail(e.target.value)} placeholder="name@magayamining.com" className="h-[40px] text-[13px]" />
+              </div>
+            )}
+            <div>
+              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Full Name *</label>
+              <Input value={uName} onChange={(e) => setUName(e.target.value)} placeholder="First Surname" className="h-[40px] text-[13px]" />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Phone</label>
+              <Input value={uPhone} onChange={(e) => setUPhone(e.target.value)} placeholder="Optional" className="h-[40px] text-[13px]" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Role *</label>
+                <Select value={uRole} onValueChange={(v) => setURole(v as DbAppRole)}>
+                  <SelectTrigger className="h-[40px] text-[13px]"><SelectValue placeholder="Select role..." /></SelectTrigger>
+                  <SelectContent>{DB_ROLES.map((r) => <SelectItem key={r} value={r} className="text-[13px]">{roleLabel(r)}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Site {SITE_SCOPED_ROLES.includes(uRole as DbAppRole) ? "*" : "(HQ roles: leave blank)"}</label>
+                <Select value={uSite || "none"} onValueChange={(v) => setUSite(v === "none" ? "" : v)}>
+                  <SelectTrigger className="h-[40px] text-[13px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-[13px]">All Sites (HQ)</SelectItem>
+                    {s.sites.map((x) => <SelectItem key={x.id} value={x.id} className="text-[13px]">{x.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {userDialog === "add" && (
+              <p className="text-[11px] text-[#9C9C9C]">No password is set here. The user opens the login page, clicks "Forgot password", and sets their own — access stays out of chat, email, and screenshots.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserDialog(null)} className="text-[13px]">Cancel</Button>
+            <Button disabled={busy || !uName.trim() || !uRole || (userDialog === "add" && !uEmail.trim())} onClick={() => void submitUser()} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : userDialog === "add" ? "Create User" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

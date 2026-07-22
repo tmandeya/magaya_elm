@@ -8,10 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockSites, mockSitePersonnel, mockApprovalStages, siteTypes, personnelRoles, roleRingColors, type SiteDetail } from "@/data/adminData";
-import { employees } from "@/data/mockData";
+import { personnelRoles, roleRingColors } from "@/data/adminData";
+import { useSites, type LiveSiteDetail as SiteDetail } from "@/hooks/useSites";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const GENDER_DATA = [
@@ -20,42 +19,31 @@ const GENDER_DATA = [
   { name: "Not Specified", value: 2, color: "#E5E4E0" },
 ];
 
-const DEPT_DATA = [
-  { name: "Mining", count: 28 },
-  { name: "Engineering", count: 18 },
-  { name: "Admin", count: 14 },
-  { name: "Security", count: 12 },
-  { name: "IT", count: 10 },
-  { name: "HR", count: 8 },
-  { name: "Finance", count: 8 },
-  { name: "Ops", count: 14 },
-];
 
-const STATUS_DATA = [
-  { name: "Active", count: 85, fill: "#1B7A43" },
-  { name: "Onboarding", count: 12, fill: "#C27A06" },
-  { name: "Offboarding", count: 3, fill: "#B91C1C" },
-];
+
+
 
 function getInitials(name: string) {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase();
 }
 
 export default function Sites() {
+  const { sites: liveSites, profiles, loading, error: loadError, addSite, setSiteActive, setApprovalToggles, assignPersonnel } = useSites();
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [personnelFilter, setPersonnelFilter] = useState("All");
   const [selectedSite, setSelectedSite] = useState<SiteDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [pendingAssign, setPendingAssign] = useState<Record<string, string>>({});
   const [addOpen, setAddOpen] = useState(false);
 
   const [newSiteName, setNewSiteName] = useState("");
   const [newSiteLocation, setNewSiteLocation] = useState("");
   const [newSiteAddress, setNewSiteAddress] = useState("");
-  const [newSiteType, setNewSiteType] = useState("Mining");
   const [newSiteStatus, setNewSiteStatus] = useState(true);
-  const [newSiteDescription, setNewSiteDescription] = useState("");
-  const [sitesList, setSitesList] = useState<SiteDetail[]>(mockSites);
+  const sitesList = liveSites;
 
   const filteredSites = useMemo(() => {
     let list = [...sitesList];
@@ -67,16 +55,10 @@ export default function Sites() {
       list = list.filter((s) => s.status === statusFilter);
     }
     if (personnelFilter === "Complete") {
-      list = list.filter((s) => {
-        const p = mockSitePersonnel[s.id];
-        return p && Object.keys(p).length === 6;
-      });
+      list = list.filter((s) => s.personnelCount === 6);
     }
     if (personnelFilter === "Incomplete") {
-      list = list.filter((s) => {
-        const p = mockSitePersonnel[s.id];
-        return !p || Object.keys(p).length < 6;
-      });
+      list = list.filter((s) => s.personnelCount < 6);
     }
     return list;
   }, [sitesList, searchQuery, statusFilter, personnelFilter]);
@@ -86,26 +68,17 @@ export default function Sites() {
     setDetailOpen(true);
   }
 
-  function handleAddSite() {
-    if (!newSiteName.trim()) return;
-    const newSite: SiteDetail = {
-      id: sitesList.length + 1,
-      name: newSiteName,
-      location: newSiteLocation,
-      address: newSiteAddress || newSiteLocation,
-      type: newSiteType,
-      status: newSiteStatus ? "Active" : "Inactive",
-      established: format(new Date(), "yyyy-MM-dd"),
-      description: newSiteDescription,
-      employees: 0,
-      workflows: { onboarding: 0, offboarding: 0, transfers: 0 },
-    };
-    setSitesList((prev) => [...prev, newSite]);
+  async function handleAddSite() {
+    if (!newSiteName.trim() || busy) return;
+    setBusy(true);
+    setActionError(null);
+    const err = await addSite({ name: newSiteName, location: newSiteLocation, address: newSiteAddress, active: newSiteStatus });
+    setBusy(false);
+    if (err) { setActionError(err); return; }
     setAddOpen(false);
     setNewSiteName("");
     setNewSiteLocation("");
     setNewSiteAddress("");
-    setNewSiteDescription("");
   }
 
   const roleIcons: Record<string, React.ElementType> = {
@@ -119,6 +92,22 @@ export default function Sites() {
 
   return (
     <div className="p-6 space-y-5">
+      {loading && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[#E5E4E0] bg-white">
+          <div className="w-5 h-5 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+          <span className="text-[13px] text-[#9C9C9C]">Loading sites...</span>
+        </div>
+      )}
+      {loadError && (
+        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load sites: {loadError}</div>
+      )}
+      {actionError && (
+        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-[#B91C1C] hover:text-[#991B1B] text-[12px] font-medium">Dismiss</button>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -175,7 +164,7 @@ export default function Sites() {
             </thead>
             <tbody>
               {filteredSites.map((site) => {
-                const personnel = mockSitePersonnel[site.id];
+                const personnel = site.personnel;
                 const assignedCount = personnel ? Object.keys(personnel).length : 0;
                 return (
                   <tr key={site.id} className="border-b border-[#E5E4E0] hover:bg-[#FAFAF8] transition-colors" style={{ height: "64px" }}>
@@ -211,7 +200,7 @@ export default function Sites() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         {assignedCount === 6 ? <Check className="w-3.5 h-3.5 text-[#1B7A43]" /> : <AlertTriangle className="w-3.5 h-3.5 text-[#C27A06]" />}
-                        <span className={cn("text-[12px]", assignedCount === 6 ? "text-[#1B7A43]" : "text-[#C27A06]")}>{assignedCount === 6 ? "6 stages configured" : "Incomplete"}</span>
+                        <span className="text-[12px] text-[#1B7A43]">{site.approvalStages} stages configured</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -289,32 +278,18 @@ export default function Sites() {
                             <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Address</label>
                             <Input defaultValue={selectedSite.address} className="h-[40px] border-[#E5E4E0] text-[13px]" />
                           </div>
+
                           <div>
-                            <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Type</label>
-                            <Select defaultValue={selectedSite.type.toLowerCase()}>
-                              <SelectTrigger className="h-[40px] border-[#E5E4E0] text-[13px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {siteTypes.map((t) => (
-                                  <SelectItem key={t} value={t.toLowerCase()}>{t}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Established</label>
-                            <Input type="date" defaultValue={selectedSite.established} className="h-[40px] border-[#E5E4E0] text-[13px]" />
+                            <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Added</label>
+                            <Input type="date" defaultValue={selectedSite.established} readOnly className="h-[40px] border-[#E5E4E0] text-[13px] bg-[#FAFAF8]" />
                           </div>
                           <div className="col-span-2 flex items-center gap-3">
                             <label className="text-[13px] font-medium text-[#525252]">Status</label>
-                            <Switch defaultChecked={selectedSite.status === "Active"} />
+                            <Switch checked={selectedSite.status === "Active"} disabled={busy}
+                              onCheckedChange={async (v) => { setBusy(true); const err = await setSiteActive(selectedSite.id, v); setBusy(false); if (err) setActionError(err); else setSelectedSite({ ...selectedSite, status: v ? "Active" : "Inactive" }); }} />
                             <span className="text-[13px] text-[#525252]">{selectedSite.status === "Active" ? "Active" : "Inactive"}</span>
                           </div>
-                          <div className="col-span-2">
-                            <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Description</label>
-                            <Textarea defaultValue={selectedSite.description} className="min-h-[80px] border-[#E5E4E0] text-[13px]" />
-                          </div>
+
                         </div>
                       </div>
                       <div className="col-span-2 space-y-3">
@@ -332,7 +307,7 @@ export default function Sites() {
                         <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#1E6BA3]">
                           <div className="text-[12px] text-[#525252] uppercase tracking-wider">Personnel Assigned</div>
                           <div className="text-[13px] text-[#1E6BA3] mt-1 font-medium">
-                            {Object.keys(mockSitePersonnel[selectedSite.id] || {}).length} of 6 roles
+                            {selectedSite.personnelCount} of 6 roles
                           </div>
                         </div>
                       </div>
@@ -343,7 +318,7 @@ export default function Sites() {
                   <TabsContent value="personnel" className="mt-4">
                     <div className="grid grid-cols-3 gap-4">
                       {personnelRoles.map((role) => {
-                        const assigned = mockSitePersonnel[selectedSite.id]?.[role.key];
+                        const assigned = selectedSite.personnel[role.key];
                         const RoleIcon = roleIcons[role.color] || UserCircle2;
                         return (
                           <div key={role.key} className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] p-4">
@@ -364,34 +339,35 @@ export default function Sites() {
                                     <div className="text-[11px] text-[#9C9C9C]">{assigned.code}</div>
                                   </div>
                                 </div>
-                                <Select defaultValue={assigned.code}>
-                                  <SelectTrigger className="h-[32px] text-[12px] border-[#E5E4E0]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {employees.filter((e) => e.siteId === selectedSite.id).map((e) => (
-                                      <SelectItem key={e.id} value={e.employeeNumber}>{e.firstName} {e.lastName}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Button variant="outline" size="sm" className="w-full text-[12px] h-[32px] text-[#B91C1C] border-[#B91C1C] hover:bg-[#FEF2F2]">
+                                <Button variant="outline" size="sm" disabled={busy} className="w-full text-[12px] h-[32px] text-[#B91C1C] border-[#B91C1C] hover:bg-[#FEF2F2]"
+                                  onClick={async () => { setBusy(true); const err = await assignPersonnel(selectedSite.id, role.key, null); setBusy(false); if (err) setActionError(err); else setSelectedSite({ ...selectedSite, personnel: { ...selectedSite.personnel, [role.key]: undefined }, personnelCount: selectedSite.personnelCount - 1 }); }}>
                                   Remove
                                 </Button>
                               </div>
                             ) : (
                               <div className="space-y-2">
                                 <p className="text-[12px] text-[#9C9C9C]">Not assigned</p>
-                                <Select>
+                                <Select value={pendingAssign[role.key] ?? ""} onValueChange={(v) => setPendingAssign((p) => ({ ...p, [role.key]: v }))}>
                                   <SelectTrigger className="h-[32px] text-[12px] border-[#E5E4E0]">
-                                    <SelectValue placeholder="Select employee..." />
+                                    <SelectValue placeholder="Select user..." />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {employees.filter((e) => e.siteId === selectedSite.id).map((e) => (
-                                      <SelectItem key={e.id} value={e.employeeNumber}>{e.firstName} {e.lastName}</SelectItem>
+                                    {profiles.map((p) => (
+                                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button size="sm" className="w-full text-[12px] h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white">
+                                <Button size="sm" disabled={busy || !pendingAssign[role.key]} className="w-full text-[12px] h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+                                  onClick={async () => {
+                                    const pid = pendingAssign[role.key];
+                                    if (!pid) return;
+                                    setBusy(true);
+                                    const err = await assignPersonnel(selectedSite.id, role.key, pid);
+                                    setBusy(false);
+                                    if (err) { setActionError(err); return; }
+                                    const prof = profiles.find((p) => p.id === pid);
+                                    setSelectedSite({ ...selectedSite, personnel: { ...selectedSite.personnel, [role.key]: { name: prof?.name ?? "User", code: "" } }, personnelCount: selectedSite.personnelCount + 1 });
+                                  }}>
                                   Assign
                                 </Button>
                               </div>
@@ -407,28 +383,48 @@ export default function Sites() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[16px] font-semibold text-[#1A1A1A]">Approval Chain Configuration</h3>
-                        <span className="text-[12px] text-[#525252]">6 stages configured</span>
+                        <span className="text-[12px] text-[#525252]">{selectedSite.approvalStages} stages configured</span>
                       </div>
-                      {mockApprovalStages.map((stage, idx) => (
-                        <div key={stage.id} className="flex items-center gap-4 bg-[#FAFAF8] rounded-lg p-4 border border-[#E5E4E0]">
-                          <div className="w-8 h-8 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[13px] font-bold shrink-0">
-                            {stage.id}
+                      {[
+                        { n: 1, name: "HR Initiation", dept: "Human Resources", always: true },
+                        { n: 2, name: "Security Clearance", dept: "Security", always: true },
+                        { n: 3, name: "IT Provisioning / Clearance", dept: "Information Technology", always: true },
+                        { n: 4, name: "Admin Setup / Clearance", dept: "Administration", always: true },
+                        { n: 5, name: "HOD Sign-off", dept: "Head of Department", always: false, toggle: "hod" },
+                        { n: 6, name: "HR Completion", dept: "Human Resources", always: true },
+                      ].map((stage) => {
+                        const enabled = stage.always || (stage.toggle === "hod" ? selectedSite.hodEnabled : false);
+                        return (
+                          <div key={stage.n} className={cn("flex items-center gap-4 rounded-lg p-4 border", enabled ? "bg-[#FAFAF8] border-[#E5E4E0]" : "bg-white border-dashed border-[#E5E4E0] opacity-60")}>
+                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0", enabled ? "bg-[#D4A017]" : "bg-[#C4C3BF]")}>{stage.n}</div>
+                            <div className="flex-1">
+                              <div className="text-[14px] font-semibold text-[#1A1A1A]">{stage.name}</div>
+                              <div className="text-[12px] text-[#525252]">{stage.dept}</div>
+                            </div>
+                            {stage.always ? (
+                              <div className="flex items-center gap-1 text-[12px] text-[#1B7A43]"><Check className="w-3.5 h-3.5" /> Standard</div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[12px] text-[#525252]">{enabled ? "Enabled" : "Disabled"}</span>
+                                <Switch checked={selectedSite.hodEnabled} disabled={busy}
+                                  onCheckedChange={async (v) => { setBusy(true); const err = await setApprovalToggles(selectedSite.id, v, selectedSite.gmEnabled); setBusy(false); if (err) setActionError(err); else setSelectedSite({ ...selectedSite, hodEnabled: v, approvalStages: 5 + (v ? 1 : 0) }); }} />
+                              </div>
+                            )}
                           </div>
-                          <div className="flex-1">
-                            <div className="text-[14px] font-semibold text-[#1A1A1A]">{stage.name}</div>
-                            <div className="text-[12px] text-[#525252]">{stage.department}</div>
-                          </div>
-                          <Badge variant="outline" className="bg-[#E8F2FA] text-[#1E6BA3] border-0 text-[11px]">
-                            {stage.requiredApprovers} approver
-                          </Badge>
-                          <div className="flex items-center gap-1 text-[12px] text-[#1B7A43]">
-                            <Check className="w-3.5 h-3.5" /> Configured
-                          </div>
-                          {idx < mockApprovalStages.length - 1 && (
-                            <div className="absolute left-1/2 -translate-x-1/2 mt-[52px] w-0.5 h-3 bg-[#E5E4E0]" />
-                          )}
+                        );
+                      })}
+                      <div className="flex items-center gap-4 rounded-lg p-4 border bg-[#FAFAF8] border-[#E5E4E0] mt-2">
+                        <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center text-[#D4A017] text-[13px] font-bold shrink-0">GM</div>
+                        <div className="flex-1">
+                          <div className="text-[14px] font-semibold text-[#1A1A1A]">Site GM Approval (Transfers)</div>
+                          <div className="text-[12px] text-[#525252]">Required before HR finalises a transfer at this site</div>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] text-[#525252]">{selectedSite.gmEnabled ? "Enabled" : "Disabled"}</span>
+                          <Switch checked={selectedSite.gmEnabled} disabled={busy}
+                            onCheckedChange={async (v) => { setBusy(true); const err = await setApprovalToggles(selectedSite.id, selectedSite.hodEnabled, v); setBusy(false); if (err) setActionError(err); else setSelectedSite({ ...selectedSite, gmEnabled: v }); }} />
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -438,7 +434,7 @@ export default function Sites() {
                       <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
                         <h4 className="text-[13px] font-semibold text-[#525252] mb-3">Employees by Department</h4>
                         <ResponsiveContainer width="100%" height={180}>
-                          <BarChart data={DEPT_DATA} layout="vertical">
+                          <BarChart data={selectedSite.deptData.map((d) => ({ name: d.name, count: d.value }))} layout="vertical">
                             <XAxis type="number" hide />
                             <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
@@ -462,13 +458,13 @@ export default function Sites() {
                       <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
                         <h4 className="text-[13px] font-semibold text-[#525252] mb-3">Employee Status</h4>
                         <ResponsiveContainer width="100%" height={180}>
-                          <BarChart data={STATUS_DATA}>
+                          <BarChart data={selectedSite.statusData.map((d) => ({ name: d.name, count: d.value }))}>
                             <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} />
                             <YAxis hide />
                             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                              {STATUS_DATA.map((entry, index) => (
-                                <Cell key={index} fill={entry.fill} />
+                              {selectedSite.statusData.map((entry, index) => (
+                                <Cell key={index} fill={{ Active: "#1B7A43", Onboarding: "#C27A06", Offboarding: "#B91C1C", Transferred: "#1E6BA3", Terminated: "#737373" }[entry.name] ?? "#D4A017"} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -521,22 +517,10 @@ export default function Sites() {
               <Textarea value={newSiteAddress} onChange={(e) => setNewSiteAddress(e.target.value)} placeholder="Full street address..." className="min-h-[60px] border-[#E5E4E0] text-[13px]" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Type</label>
-                <Select value={newSiteType} onValueChange={setNewSiteType}>
-                  <SelectTrigger className="h-[40px] border-[#E5E4E0] text-[13px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {siteTypes.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+
               <div>
                 <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Code (auto)</label>
-                <Input value={newSiteName ? newSiteName.toUpperCase().replace(/\s+/g, "-").substring(0, 6) : ""} readOnly className="h-[40px] border-[#E5E4E0] text-[13px] bg-[#FAFAF8] text-[#9C9C9C]" />
+                <Input value={newSiteName ? newSiteName.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) : ""} readOnly className="h-[40px] border-[#E5E4E0] text-[13px] bg-[#FAFAF8] text-[#9C9C9C]" />
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -546,7 +530,7 @@ export default function Sites() {
             </div>
             <div>
               <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Description</label>
-              <Textarea value={newSiteDescription} onChange={(e) => setNewSiteDescription(e.target.value)} placeholder="Brief description of the site..." className="min-h-[80px] border-[#E5E4E0] text-[13px]" />
+
             </div>
           </div>
           <div className="px-6 py-4 border-t border-[#E5E4E0] flex justify-end gap-3">

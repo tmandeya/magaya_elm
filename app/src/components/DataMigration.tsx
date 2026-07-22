@@ -24,7 +24,7 @@ const HEADER_MAP: Record<string, string> = {
   "contractstartdate": "contract_start_date", "contractenddate": "contract_end_date",
   "status": "status", "academicqualifications": "academic_qualifications",
   "combinedyearsofexperience": "years_of_experience", "experience": "experience_detail",
-  "comments": "comments", "company": "company", "site": "site",
+  "comments": "comments", "company": "company", "site": "site", "internalid": "internal_id",
   // Financial fields -> restricted employee_financials table
   "paymentbasis": "payment_basis", "paymentmethod": "payment_method", "paymentpoint": "payment_point",
   "payroll": "payroll_name", "payroll2": "payroll_name_2", "payrollperiod": "payroll_period",

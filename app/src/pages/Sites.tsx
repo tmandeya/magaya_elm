@@ -64,6 +64,8 @@ export default function Sites() {
   }, [sitesList, searchQuery, statusFilter, personnelFilter]);
 
   function openDetail(site: SiteDetail) {
+    setPendingAssign({});      // selections are per-site; never carry over
+    setActionError(null);
     setSelectedSite(site);
     setDetailOpen(true);
   }
@@ -238,6 +240,12 @@ export default function Sites() {
       {/* Site Detail Modal */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-[960px] max-h-[85vh] overflow-y-auto p-0 gap-0">
+          {actionError && (
+            <div className="mx-6 mt-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+              <span>{actionError}</span>
+              <button onClick={() => setActionError(null)} className="text-[#B91C1C] hover:text-[#991B1B] text-[12px] font-medium">Dismiss</button>
+            </div>
+          )}
           {selectedSite && (
             <>
               <DialogHeader className="px-6 py-4 border-b border-[#E5E4E0]">
@@ -347,7 +355,7 @@ export default function Sites() {
                             ) : (
                               <div className="space-y-2">
                                 <p className="text-[12px] text-[#9C9C9C]">Not assigned</p>
-                                <Select value={pendingAssign[role.key] ?? ""} onValueChange={(v) => setPendingAssign((p) => ({ ...p, [role.key]: v }))}>
+                                <Select value={pendingAssign[`${selectedSite.id}:${role.key}`] ?? ""} onValueChange={(v) => setPendingAssign((p) => ({ ...p, [`${selectedSite.id}:${role.key}`]: v }))}>
                                   <SelectTrigger className="h-[32px] text-[12px] border-[#E5E4E0]">
                                     <SelectValue placeholder="Select user..." />
                                   </SelectTrigger>
@@ -357,15 +365,16 @@ export default function Sites() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button size="sm" disabled={busy || !pendingAssign[role.key]} className="w-full text-[12px] h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+                                <Button size="sm" disabled={busy || !pendingAssign[`${selectedSite.id}:${role.key}`]} className="w-full text-[12px] h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
                                   onClick={async () => {
-                                    const pid = pendingAssign[role.key];
+                                    const pid = pendingAssign[`${selectedSite.id}:${role.key}`];
                                     if (!pid) return;
                                     setBusy(true);
                                     const err = await assignPersonnel(selectedSite.id, role.key, pid);
                                     setBusy(false);
                                     if (err) { setActionError(err); return; }
                                     const prof = profiles.find((p) => p.id === pid);
+                                    setPendingAssign((p) => { const n = { ...p }; delete n[`${selectedSite.id}:${role.key}`]; return n; });
                                     setSelectedSite({ ...selectedSite, personnel: { ...selectedSite.personnel, [role.key]: { name: prof?.name ?? "User", code: "" } }, personnelCount: selectedSite.personnelCount + 1 });
                                   }}>
                                   Assign

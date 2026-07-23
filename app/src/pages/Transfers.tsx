@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -28,9 +27,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
-import { mockTransferWorkflows, activeEmployeesForOffboarding, allSites, getTransferById } from "@/data/workflowData";
-import type { TransferWorkflow, TransferStage } from "@/types/workflow";
+import { WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
+import { useTransfers, type LiveTransferWorkflow, type TransferCandidate } from "@/hooks/useTransfers";
+import type { LiveTask } from "@/hooks/useOnboarding";
 import {
   Plus,
   Search,
@@ -45,13 +44,6 @@ import {
   Building,
 } from "lucide-react";
 
-const TRANSFER_STEPS = [
-  "Transfer Details",
-  "IT Clearance",
-  "Security Setup",
-  "Approval Chain",
-  "Review & Submit",
-];
 
 const STAGE_COLORS: Record<string, string> = {
   "HR Initiation": "bg-[#E8F2FA] text-[#1E6BA3]",
@@ -70,9 +62,13 @@ const STAGE_COLORS: Record<string, string> = {
 // ====================================================================
 
 function TransferList({
+  workflows,
+  loadError,
   onNewTransfer,
   onViewDetail,
 }: {
+  workflows: LiveTransferWorkflow[];
+  loadError: string | null;
   onNewTransfer: () => void;
   onViewDetail: (id: string) => void;
 }) {
@@ -80,7 +76,6 @@ function TransferList({
   const [originFilter, setOriginFilter] = useState<string>("All");
   const [destFilter, setDestFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [workflows] = useState<TransferWorkflow[]>(mockTransferWorkflows);
 
   const filtered = useMemo(() => {
     return workflows.filter((w) => {
@@ -106,6 +101,9 @@ function TransferList({
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {loadError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load transfers: {loadError}</div>
+      )}
       {/* Page Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -355,49 +353,43 @@ function TransferList({
 function TransferDetail({
   workflow,
   onBack,
+  onTaskStatus,
 }: {
-  workflow: TransferWorkflow;
+  workflow: LiveTransferWorkflow;
   onBack: () => void;
+  onTaskStatus: (taskId: string, status: LiveTask["dbStatus"], notes?: string) => Promise<string | null>;
 }) {
   const [expandedStage, setExpandedStage] = useState<number | null>(
     workflow.stages.findIndex((s) => s.status === "in-progress")
   );
-  const [stages, setStages] = useState<TransferStage[]>(workflow.stages);
-  const [activityLog] = useState(workflow.activityLog);
+  const stages = workflow.stages;
+  const activityLog = workflow.activityLog;
   const [signOffStage, setSignOffStage] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleTaskToggle = (stageIndex: number, taskIndex: number) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      if (stage.items) {
-        const items = [...stage.items];
-        items[taskIndex] = { ...items[taskIndex], completed: !items[taskIndex].completed };
-        stage.items = items;
-      }
-      updated[stageIndex] = stage;
-      return updated;
-    });
+  const handleTaskToggle = async (stageIndex: number, taskIndex: number) => {
+    const task = stages[stageIndex]?.items?.[taskIndex];
+    if (!task || busy) return;
+    setBusy(true);
+    setActionError(null);
+    const err = await onTaskStatus(task.id, task.completed ? "pending" : "completed");
+    setBusy(false);
+    if (err) setActionError(err);
   };
 
-  const handleSignOff = (stageIndex: number, notes: string) => {
-    setStages((prev) => {
-      const updated = [...prev];
-      const stage = { ...updated[stageIndex] };
-      stage.status = "completed";
-      stage.completedBy = "Current User";
-      stage.completedDate = new Date().toISOString().split("T")[0];
-      stage.notes = notes || "Stage signed off.";
-      updated[stageIndex] = stage;
-      if (stageIndex + 1 < updated.length) {
-        const next = { ...updated[stageIndex + 1] };
-        if (next.status === "pending") {
-          next.status = "in-progress";
-          updated[stageIndex + 1] = next;
-        }
+  const handleSignOff = async (stageIndex: number, notes: string) => {
+    const stage = stages[stageIndex];
+    if (!stage?.items || busy) return;
+    setBusy(true);
+    setActionError(null);
+    for (const t of stage.items) {
+      if (t.required && !t.completed) {
+        const err = await onTaskStatus(t.id, "completed", notes || undefined);
+        if (err) { setActionError(err); setBusy(false); return; }
       }
-      return updated;
-    });
+    }
+    setBusy(false);
     setSignOffStage(null);
   };
 
@@ -405,20 +397,13 @@ function TransferDetail({
     name: s.name,
     status: s.status as "completed" | "in-progress" | "pending",
     assignedTo: s.assignedTo,
-    site: s.site,
+    site: s.siteName ?? undefined,
   }));
 
   // Split stages for dual-panel view
-  const originStages = stages.filter(
-    (s) =>
-      s.name.includes("Origin") ||
-      s.name === "HR Initiation" ||
-      (s.name === "HQ HR Final Approval" && s.site === "HQ")
-  );
-  const destStages = stages.filter((s) => s.name.includes("Destination"));
-  const approvalStages = stages.filter(
-    (s) => s.name.includes("HOD") || s.name === "Origin Site HR" || s.name === "HQ HR Final Approval"
-  );
+  const originStages = stages.filter((s) => s.siteRole === "origin");
+  const destStages = stages.filter((s) => s.siteRole === "destination");
+  const approvalStages = stages.filter((s) => s.siteRole === "shared");
 
   return (
     <div className="animate-in fade-in duration-300">
@@ -430,6 +415,9 @@ function TransferDetail({
         <ChevronLeft className="w-4 h-4" />
         Back to Transfer Hub
       </button>
+      {actionError && (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
+      )}
 
       {/* Header Card */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
@@ -597,7 +585,7 @@ function TransferDetail({
               )}
             >
               <div className="text-[11px] font-medium text-[#1A1A1A]">{stage.name}</div>
-              <div className="text-[10px] text-[#737373] mt-0.5">{stage.site}</div>
+              <div className="text-[10px] text-[#737373] mt-0.5">{stage.siteName}</div>
               <div className="flex items-center gap-1.5 mt-2">
                 <div className="w-5 h-5 rounded-full bg-[#E5E4E0] flex items-center justify-center text-[8px] font-bold text-[#525252]">
                   {(stage.assignedTo || "?")
@@ -713,413 +701,117 @@ function TransferDetail({
 // NEW TRANSFER WIZARD
 // ====================================================================
 
-function NewTransferWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [step, setStep] = useState(0);
+function NewTransferWizard({ open, onClose, candidates, sites, onSubmit }: {
+  open: boolean;
+  onClose: () => void;
+  candidates: TransferCandidate[];
+  sites: { id: string; name: string }[];
+  onSubmit: (input: { employeeId: string; destinationSiteId: string; effectiveDate: string; reason: string }) => Promise<{ id: string | null; error: string | null }>;
+}) {
+  const navigate = useNavigate();
   const [selectedEmployee, setSelectedEmployee] = useState("");
-  const [destinationSite, setDestinationSite] = useState("");
-  const [destinationDept, setDestinationDept] = useState("");
-  const [destinationPosition, setDestinationPosition] = useState("");
+  const [destinationSiteId, setDestinationSiteId] = useState("");
   const [effectiveDate, setEffectiveDate] = useState("");
   const [transferReason, setTransferReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Step 2: IT Hardware
-  const [hardwareDecisions, setHardwareDecisions] = useState([
-    { item: "Dell Latitude 5520", assetTag: "DELL-2024-001", decision: "return" as string },
-    { item: "HP LaserJet Printer", assetTag: "HP-2024-001", decision: "return" as string },
-    { item: "Motorola Radio", assetTag: "RADIO-2024-001", decision: "return" as string },
-  ]);
-  const [m365Decision, setM365Decision] = useState("transfer");
-
-  // Step 3: Security
-  const [newIdCard, setNewIdCard] = useState(true);
-  const [newVehicleCard, setNewVehicleCard] = useState(false);
-
-  // Step 5: Confirm
-  const [confirmed, setConfirmed] = useState(false);
-
-  const resetForm = () => {
-    setStep(0);
-    setSelectedEmployee("");
-    setDestinationSite("");
-    setDestinationDept("");
-    setDestinationPosition("");
-    setEffectiveDate("");
-    setTransferReason("");
-    setConfirmed(false);
-  };
+  const emp = candidates.find((c) => c.id === selectedEmployee);
 
   const handleClose = () => {
-    resetForm();
+    setSelectedEmployee(""); setDestinationSiteId(""); setEffectiveDate(""); setTransferReason(""); setError(null);
     onClose();
   };
 
-  const selectedEmpData = activeEmployeesForOffboarding.find((e) => e.id === selectedEmployee);
-  const originSite = selectedEmpData?.site || "";
-
-  const canProceed = () => {
-    if (step === 0) return selectedEmployee && destinationSite && effectiveDate;
-    if (step === 4) return confirmed;
-    return true;
+  const submit = async () => {
+    if (!selectedEmployee || !destinationSiteId || !effectiveDate || busy) return;
+    setBusy(true);
+    setError(null);
+    const res = await onSubmit({ employeeId: selectedEmployee, destinationSiteId, effectiveDate, reason: transferReason.trim() });
+    setBusy(false);
+    if (res.error) { setError(res.error); return; }
+    handleClose();
+    if (res.id) navigate(`/transfers/${res.id}`);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[900px] max-h-[85vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#E5E4E0]">
-          <DialogTitle className="text-[18px] font-semibold">New Transfer</DialogTitle>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="max-w-[560px]" aria-describedby={undefined}>
+        <DialogHeader>
+          <DialogTitle className="text-[18px]">Initiate Transfer</DialogTitle>
         </DialogHeader>
-
-        <div className="px-6 py-4">
-          <WizardStepper steps={TRANSFER_STEPS} currentStep={step} />
-
-          {/* Step 1: Transfer Details */}
-          {step === 0 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                  Select Employee <span className="text-[#B91C1C]">*</span>
-                </label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger className="h-10 text-[13px]">
-                    <SelectValue placeholder="Choose an active employee..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeEmployeesForOffboarding.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id} className="text-[13px]">
-                        {emp.name} ({emp.code}) — {emp.site}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedEmpData && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg">
-                  <div>
-                    <div className="text-[10px] uppercase text-[#737373] font-medium">Current Site</div>
-                    <div className="text-[13px] font-medium text-[#1A1A1A]">{selectedEmpData.site}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase text-[#737373] font-medium">Department</div>
-                    <div className="text-[13px] font-medium text-[#1A1A1A]">{selectedEmpData.department}</div>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                    Destination Site <span className="text-[#B91C1C]">*</span>
-                  </label>
-                  <Select value={destinationSite} onValueChange={setDestinationSite}>
-                    <SelectTrigger className="h-10 text-[13px]">
-                      <SelectValue placeholder="Select site..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allSites
-                        .filter((s) => s !== originSite)
-                        .map((s) => (
-                          <SelectItem key={s} value={s} className="text-[13px]">
-                            {s}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                    Destination Department
-                  </label>
-                  <Input
-                    placeholder="e.g. Engineering"
-                    value={destinationDept}
-                    onChange={(e) => setDestinationDept(e.target.value)}
-                    className="h-10 text-[13px]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                    New Position
-                  </label>
-                  <Input
-                    placeholder="e.g. Senior Engineer"
-                    value={destinationPosition}
-                    onChange={(e) => setDestinationPosition(e.target.value)}
-                    className="h-10 text-[13px]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                    Effective Date <span className="text-[#B91C1C]">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={effectiveDate}
-                    onChange={(e) => setEffectiveDate(e.target.value)}
-                    className="h-10 text-[13px]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                  Transfer Reason
-                </label>
-                <Textarea
-                  placeholder="Optional reason for the transfer..."
-                  value={transferReason}
-                  onChange={(e) => setTransferReason(e.target.value)}
-                  className="min-h-[60px] text-[13px]"
-                />
-              </div>
+        <div className="space-y-4 py-2">
+          {error && <div className="px-3 py-2.5 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
+          <div>
+            <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Employee <span className="text-[#B91C1C]">*</span></label>
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select employee..." /></SelectTrigger>
+              <SelectContent className="max-h-[280px]">
+                {candidates.map((c) => (
+                  <SelectItem key={c.id} value={c.id} className="text-[13px]">{c.name} ({c.code}) — {c.site}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {candidates.length === 0 && <p className="text-[11px] text-[#9C9C9C] mt-1.5">No active employees available.</p>}
+          </div>
+          {emp && (
+            <div className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] px-4 py-3 text-[12px] text-[#525252]">
+              Origin site: <strong className="text-[#1A1A1A]">{emp.site}</strong> · Department: <strong className="text-[#1A1A1A]">{emp.department}</strong>
             </div>
           )}
-
-          {/* Step 2: IT Hardware Decision */}
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">IT Hardware Decision</h3>
-              <p className="text-[12px] text-[#525252]">
-                For each hardware item, decide whether the employee moves with it or returns it to
-                the origin site.
-              </p>
-
-              <div className="space-y-3">
-                {hardwareDecisions.map((hw, i) => (
-                  <div key={hw.assetTag} className="p-3 border border-[#E5E4E0] rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <div className="text-[13px] font-medium text-[#1A1A1A]">{hw.item}</div>
-                        <div className="text-[10px] text-[#737373]">{hw.assetTag}</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {["return", "move"].map((decision) => (
-                        <button
-                          key={decision}
-                          onClick={() => {
-                            const updated = [...hardwareDecisions];
-                            updated[i] = { ...hw, decision };
-                            setHardwareDecisions(updated);
-                          }}
-                          className={cn(
-                            "flex-1 py-1.5 rounded-md text-[11px] font-medium border transition-all",
-                            hw.decision === decision
-                              ? decision === "return"
-                                ? "bg-[#FEF2F2] border-[#B91C1C] text-[#B91C1C]"
-                                : "bg-[#E8F5EC] border-[#1B7A43] text-[#1B7A43]"
-                              : "bg-white border-[#E5E4E0] text-[#525252] hover:border-[#C4C3BF]"
-                          )}
-                        >
-                          {decision === "return" ? "Return to Origin" : "Move with Employee"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] mb-2 block">
-                  M365 Account
-                </label>
-                <div className="flex gap-2">
-                  {["transfer", "new"].map((decision) => (
-                    <button
-                      key={decision}
-                      onClick={() => setM365Decision(decision)}
-                      className={cn(
-                        "flex-1 py-2 rounded-md text-[12px] font-medium border transition-all",
-                        m365Decision === decision
-                          ? "bg-[#E8F2FA] border-[#1E6BA3] text-[#1E6BA3]"
-                          : "bg-white border-[#E5E4E0] text-[#525252] hover:border-[#C4C3BF]"
-                      )}
-                    >
-                      {decision === "transfer" ? "Transfer Account" : "Disable & Create New"}
-                    </button>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Destination Site <span className="text-[#B91C1C]">*</span></label>
+              <Select value={destinationSiteId} onValueChange={setDestinationSiteId}>
+                <SelectTrigger className="h-10 text-[13px]"><SelectValue placeholder="Select site..." /></SelectTrigger>
+                <SelectContent className="max-h-[280px]">
+                  {sites.filter((s) => s.id !== emp?.siteId).map((s) => (
+                    <SelectItem key={s.id} value={s.id} className="text-[13px]">{s.name}</SelectItem>
                   ))}
-                </div>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-
-          {/* Step 3: Security */}
-          {step === 2 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Security Requirements</h3>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div className="p-4 border border-[#E5E4E0] rounded-lg">
-                  <div className="text-[12px] font-semibold text-[#B91C1C] mb-3">
-                    Origin Site
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox defaultChecked />
-                      Collect existing ID card
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox defaultChecked />
-                      Collect existing vehicle card
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox defaultChecked />
-                      Revoke all origin access zones
-                    </label>
-                  </div>
-                </div>
-
-                <div className="p-4 border border-[#E5E4E0] rounded-lg">
-                  <div className="text-[12px] font-semibold text-[#1B7A43] mb-3">
-                    Destination Site
-                  </div>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox checked={newIdCard} onCheckedChange={(c) => setNewIdCard(!!c)} />
-                      Issue new ID card
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox
-                        checked={newVehicleCard}
-                        onCheckedChange={(c) => setNewVehicleCard(!!c)}
-                      />
-                      Issue new vehicle card
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-[12px]">
-                      <Checkbox defaultChecked />
-                      Configure destination access zones
-                    </label>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Effective Date <span className="text-[#B91C1C]">*</span></label>
+              <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className="h-10 text-[13px]" />
             </div>
-          )}
-
-          {/* Step 4: Approval Chain Preview */}
-          {step === 3 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Approval Chain</h3>
-              <p className="text-[12px] text-[#525252]">
-                This transfer will go through the following 9-stage approval process:
-              </p>
-
-              <div className="space-y-2">
-                {[
-                  { stage: "HR Initiation", site: "HQ", role: "HQ HR" },
-                  { stage: "Origin IT Clearance", site: originSite || "Origin", role: "Site IT" },
-                  { stage: "Origin Security Clearance", site: originSite || "Origin", role: "Site Security" },
-                  { stage: "Destination IT Preparation", site: destinationSite || "Destination", role: "Site IT" },
-                  { stage: "Destination Security Preparation", site: destinationSite || "Destination", role: "Site Security" },
-                  { stage: "Origin HOD Sign-off", site: originSite || "Origin", role: "HOD" },
-                  { stage: "Destination HOD Sign-off", site: destinationSite || "Destination", role: "HOD" },
-                  { stage: "Origin Site HR", site: originSite || "Origin", role: "Site HR" },
-                  { stage: "HQ HR Final Approval", site: "HQ", role: "HQ HR" },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2.5 bg-[#FAFAF8] rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#E5E4E0] flex items-center justify-center text-[10px] font-bold text-[#525252]">
-                        {i + 1}
-                      </div>
-                      <div className="text-[12px] font-medium text-[#1A1A1A]">{item.stage}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[10px] h-5 bg-[#F4F3EF]">
-                        {item.site}
-                      </Badge>
-                      <span className="text-[11px] text-[#737373]">{item.role}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Review */}
-          {step === 4 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Review & Submit</h3>
-
-              {selectedEmpData && (
-                <div className="p-4 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg space-y-2">
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Employee</span>
-                    <span className="font-medium text-[#1A1A1A]">{selectedEmpData.name}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Transfer</span>
-                    <span className="font-medium text-[#1A1A1A]">
-                      {originSite} &rarr; {destinationSite}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Effective Date</span>
-                    <span className="font-medium text-[#1A1A1A]">{effectiveDate}</span>
-                  </div>
-                  {destinationPosition && (
-                    <div className="flex justify-between text-[12px]">
-                      <span className="text-[#737373]">New Position</span>
-                      <span className="font-medium text-[#1A1A1A]">{destinationPosition}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <label className="flex items-center gap-2 pt-2 cursor-pointer">
-                <Checkbox checked={confirmed} onCheckedChange={(c) => setConfirmed(!!c)} />
-                <span className="text-[12px] text-[#525252]">
-                  I confirm all details are accurate and the transfer is authorized.
-                </span>
-              </label>
-            </div>
-          )}
+          </div>
+          <div>
+            <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">Transfer Reason</label>
+            <Textarea value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="e.g. Operational requirement at destination site..." className="min-h-[70px] text-[13px]" />
+          </div>
+          <p className="text-[11px] text-[#9C9C9C]">
+            On submission the engine opens the full clearance chain: Origin IT (hardware move/hand-in) and Origin Security (card decision) in parallel, then Destination IT/Security preparation, HOD release/acceptance, both Site HRs, and HQ HR final sign-off. Hardware and card decisions are made by those departments inside the workflow.
+          </p>
         </div>
-
-        <DialogFooter className="px-6 py-4 border-t border-[#E5E4E0]">
-          {step > 0 && (
-            <Button variant="outline" onClick={() => setStep(step - 1)} className="text-[13px]">
-              Back
-            </Button>
-          )}
-          {step < TRANSFER_STEPS.length - 1 ? (
-            <Button
-              onClick={() => setStep(step + 1)}
-              disabled={!canProceed()}
-              className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
-            >
-              Next
-            </Button>
-          ) : (
-            <Button
-              onClick={handleClose}
-              disabled={!canProceed()}
-              className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
-            >
-              Submit Transfer Request
-            </Button>
-          )}
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} className="text-[13px]">Cancel</Button>
+          <Button disabled={busy || !selectedEmployee || !destinationSiteId || !effectiveDate} onClick={() => void submit()} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">
+            {busy ? "Initiating..." : "Submit & Initiate"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ====================================================================
-// MAIN TRANSFER PAGE
-// ====================================================================
-
 export default function Transfers() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { workflows, candidates, sites, loading, error: loadError, startTransfer, setTaskStatus } = useTransfers();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-3">
+        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <p className="text-[13px] text-[#9C9C9C]">Loading transfers...</p>
+      </div>
+    );
+  }
 
   if (id) {
-    const workflow = getTransferById(id);
+    const workflow = workflows.find((w) => w.id === id);
     if (!workflow) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
@@ -1136,16 +828,18 @@ export default function Transfers() {
         </div>
       );
     }
-    return <TransferDetail workflow={workflow} onBack={() => navigate("/transfers")} />;
+    return <TransferDetail workflow={workflow} onBack={() => navigate("/transfers")} onTaskStatus={setTaskStatus} />;
   }
 
   return (
     <>
       <TransferList
+        workflows={workflows}
+        loadError={loadError}
         onNewTransfer={() => setWizardOpen(true)}
         onViewDetail={(workflowId) => navigate(`/transfers/${workflowId}`)}
       />
-      <NewTransferWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+      <NewTransferWizard open={wizardOpen} onClose={() => setWizardOpen(false)} candidates={candidates} sites={sites} onSubmit={startTransfer} />
     </>
   );
 }

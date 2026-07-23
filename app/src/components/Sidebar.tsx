@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, UserPlus, UserMinus, ArrowLeftRight, Building2, BarChart3, ShieldCheck, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { roleDefinitions } from "@/data/mockData";
+import { roleDefinitions } from "@/lib/uiConstants";
 import type { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
 

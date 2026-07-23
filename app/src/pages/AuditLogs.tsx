@@ -1,426 +1,171 @@
-import { useState, useMemo } from "react";
-import { Search, Download, ChevronDown, ChevronUp, Eye, Plus, Pencil, Trash2, Check, X, LogIn, LogOut, Shield } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// Audit Logs: live compliance trail from the immutable audit_logs table.
+import { useState } from "react";
+import { ChevronDown, ShieldCheck, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { mockExtendedAuditLogs, actionBadgeColors } from "@/data/adminData";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { useAuditLogs, AUDIT_TABLES, type AuditRow } from "@/hooks/useAuditLogs";
 
-const actionIconMap: Record<string, React.ElementType> = {
-  Create: Plus,
-  Update: Pencil,
-  Delete: Trash2,
-  Approve: Check,
-  Reject: X,
-  Login: LogIn,
-  Logout: LogOut,
-  Export: Download,
-  View: Eye,
+const ACTION_STYLE: Record<string, string> = {
+  INSERT: "bg-[#E8F5EC] text-[#1B7A43]",
+  UPDATE: "bg-[#E8F2FA] text-[#1E6BA3]",
+  DELETE: "bg-[#FEF2F2] text-[#B91C1C]",
 };
-
-const moduleColors: Record<string, { bg: string; text: string }> = {
-  "Employee Master": { bg: "#E8F2FA", text: "#1E6BA3" },
-  "Onboarding": { bg: "#E8F5EC", text: "#1B7A43" },
-  "Offboarding": { bg: "#FEF2F2", text: "#B91C1C" },
-  "Transfer": { bg: "#FDF3E0", text: "#C27A06" },
-  "Settings": { bg: "#FFF7ED", text: "#C27A06" },
-  "Authentication": { bg: "#F5F5F5", text: "#737373" },
-  "Site": { bg: "#E8F2FA", text: "#1E6BA3" },
-  "Report": { bg: "#F3E8FF", text: "#7C3AED" },
-  "Workflow": { bg: "#E8F5EC", text: "#1B7A43" },
+const MODULE_LABEL: Record<string, string> = {
+  employees: "Employees", employee_financials: "Payroll & Banking", employee_documents: "Documents",
+  workflows: "Workflows", workflow_stages: "Workflow Stages", workflow_tasks: "Workflow Tasks",
+  workflow_signoffs: "Sign-offs", profiles: "Users", sites: "Sites", departments: "Departments",
+  site_key_personnel: "Key Personnel", site_config: "Site Config",
 };
+const fmt = (d: string) => new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-function getInitials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").toUpperCase();
+function DiffBlock({ row }: { row: AuditRow }) {
+  const changed: { key: string; before: string; after: string }[] = [];
+  if (row.action === "UPDATE" && row.oldData && row.newData) {
+    for (const k of Object.keys(row.newData)) {
+      const b = JSON.stringify(row.oldData[k] ?? null);
+      const a = JSON.stringify(row.newData[k] ?? null);
+      if (b !== a && k !== "updated_at") changed.push({ key: k, before: b, after: a });
+    }
+  }
+  return (
+    <div className="px-5 py-4 bg-[#FAFAF8] border-t border-[#E5E4E0] text-[12px] space-y-2">
+      <div className="text-[#737373]">Record: <span className="font-mono text-[11px]">{row.recordId ?? "—"}</span>{row.siteName ? ` · Site: ${row.siteName}` : ""}</div>
+      {row.action === "UPDATE" ? (
+        changed.length > 0 ? (
+          <div className="space-y-1">
+            {changed.slice(0, 12).map((c) => (
+              <div key={c.key} className="flex gap-2 flex-wrap">
+                <span className="font-medium text-[#1A1A1A] min-w-[160px]">{c.key}</span>
+                <span className="text-[#B91C1C] line-through break-all">{c.before}</span>
+                <span className="text-[#1B7A43] break-all">{c.after}</span>
+              </div>
+            ))}
+            {changed.length > 12 && <div className="text-[#9C9C9C]">…and {changed.length - 12} more fields</div>}
+          </div>
+        ) : <div className="text-[#9C9C9C]">No field-level differences (timestamp-only update)</div>
+      ) : (
+        <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-[#525252] max-h-[220px] overflow-y-auto">
+          {JSON.stringify(row.action === "DELETE" ? row.oldData : row.newData, null, 2)?.slice(0, 2500)}
+        </pre>
+      )}
+    </div>
+  );
 }
 
 export default function AuditLogs() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [userFilter, setUserFilter] = useState("All");
-  const [actionFilter, setActionFilter] = useState("All");
-  const [moduleFilter, setModuleFilter] = useState("All");
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const { rows, total, stats, page, setPage, pageSize, filters, setFilters, profiles, loading, error } = useAuditLogs();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
 
-  const allLogs = mockExtendedAuditLogs;
-
-  const filteredLogs = useMemo(() => {
-    let logs = [...allLogs];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      logs = logs.filter((l) =>
-        l.user.name.toLowerCase().includes(q) ||
-        l.action.toLowerCase().includes(q) ||
-        l.module.toLowerCase().includes(q) ||
-        l.details.toLowerCase().includes(q) ||
-        (l.employee?.name.toLowerCase().includes(q) ?? false)
-      );
-    }
-    if (dateFrom) {
-      logs = logs.filter((l) => l.timestamp >= new Date(dateFrom).toISOString());
-    }
-    if (dateTo) {
-      logs = logs.filter((l) => l.timestamp <= new Date(dateTo + "T23:59:59").toISOString());
-    }
-    if (userFilter !== "All") {
-      logs = logs.filter((l) => l.user.name === userFilter);
-    }
-    if (actionFilter !== "All") {
-      logs = logs.filter((l) => l.action === actionFilter);
-    }
-    if (moduleFilter !== "All") {
-      logs = logs.filter((l) => l.module === moduleFilter);
-    }
-    return logs;
-  }, [allLogs, searchQuery, dateFrom, dateTo, userFilter, actionFilter, moduleFilter]);
-
-  const totalLogs = filteredLogs.length;
-  const totalPages = Math.max(1, Math.ceil(totalLogs / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIdx = (currentPage - 1) * pageSize;
-  const endIdx = Math.min(startIdx + pageSize, totalLogs);
-  const pageLogs = filteredLogs.slice(startIdx, endIdx);
-
-  // Summary stats
-  const stats = useMemo(() => {
-    return {
-      total: filteredLogs.length,
-      create: filteredLogs.filter((l) => l.action === "Create").length,
-      update: filteredLogs.filter((l) => l.action === "Update").length,
-      delete: filteredLogs.filter((l) => l.action === "Delete").length,
-      login: filteredLogs.filter((l) => l.action === "Login" || l.action === "Logout").length,
-      export: filteredLogs.filter((l) => l.action === "Export").length,
-    };
-  }, [filteredLogs]);
-
-  const uniqueUsers = Array.from(new Set(allLogs.map((l) => l.user.name)));
-  const uniqueModules = Array.from(new Set(allLogs.map((l) => l.module)));
-
-  function toggleRow(id: string) {
-    setExpandedRow((prev) => (prev === id ? null : id));
-  }
+  const exportCsv = () => {
+    const header = "Timestamp,User,Action,Module,Subject,Record ID\n";
+    const body = rows.map((r) => [fmt(r.createdAt), r.performedByName, r.action, MODULE_LABEL[r.tableName] ?? r.tableName, (r.subject ?? "").replace(/,/g, " "), r.recordId ?? ""].join(",")).join("\n");
+    const blob = new Blob([header + body], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `audit_logs_page${page + 1}.csv`;
+    a.click();
+  };
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Page Header */}
-      <div className="flex items-start justify-between">
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] leading-tight tracking-[-0.02em]">Audit Logs</h1>
-          <p className="text-[13px] text-[#525252] mt-1">Comprehensive system activity and compliance logging</p>
+          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Audit Logs</h1>
+          <p className="text-[13px] text-[#525252] mt-1">Immutable system activity and compliance trail</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="text-[11px] text-[#9C9C9C] border-[#E5E4E0] h-[28px] px-3">
-            Retention: 7 years
-          </Badge>
-          <Button variant="outline" className="h-[40px] text-[13px] gap-2 border-[#E5E4E0]" onClick={() => setExportOpen(true)}>
-            <Download className="w-4 h-4" /> Export
-          </Button>
-        </div>
+        <Button variant="outline" onClick={exportCsv} className="text-[13px]"><Download className="w-4 h-4 mr-1.5" /> Export page (CSV)</Button>
       </div>
 
-      {/* Summary Strip */}
-      <div className="flex items-center gap-6 bg-white rounded-lg border border-[#E5E4E0] px-5 py-3">
-        <div>
-          <div className="text-[16px] font-bold text-[#1A1A1A]">{stats.total}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Total Events</div>
-        </div>
-        <div className="w-px h-8 bg-[#E5E4E0]" />
-        <div>
-          <div className="text-[16px] font-bold text-[#1B7A43]">{stats.create}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Create</div>
-        </div>
-        <div className="w-px h-8 bg-[#E5E4E0]" />
-        <div>
-          <div className="text-[16px] font-bold text-[#1E6BA3]">{stats.update}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Update</div>
-        </div>
-        <div className="w-px h-8 bg-[#E5E4E0]" />
-        <div>
-          <div className="text-[16px] font-bold text-[#B91C1C]">{stats.delete}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Delete</div>
-        </div>
-        <div className="w-px h-8 bg-[#E5E4E0]" />
-        <div>
-          <div className="text-[16px] font-bold text-[#737373]">{stats.login}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Login/Logout</div>
-        </div>
-        <div className="w-px h-8 bg-[#E5E4E0]" />
-        <div>
-          <div className="text-[16px] font-bold text-[#7C3AED]">{stats.export}</div>
-          <div className="text-[10px] font-medium uppercase tracking-wider text-[#737373]">Export</div>
-        </div>
+      {error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total Events", value: total, color: "#1A1A1A" },
+          { label: "Creates", value: stats.inserts, color: "#1B7A43" },
+          { label: "Updates", value: stats.updates, color: "#1E6BA3" },
+          { label: "Deletes", value: stats.deletes, color: "#B91C1C" },
+        ].map((c) => (
+          <div key={c.label} className="bg-white rounded-[10px] border border-[#E5E4E0] p-4">
+            <div className="text-[24px] font-bold" style={{ color: c.color }}>{c.value.toLocaleString()}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#9C9C9C] mt-0.5">{c.label}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-[10px] border border-[#E5E4E0]">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C9C]" />
-          <Input placeholder="Search logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 w-[200px] h-[36px] border-[#E5E4E0] text-[13px]" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-[36px] text-[12px] border-[#E5E4E0] w-[140px]" />
-          <span className="text-[#9C9C9C] text-[12px]">to</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-[36px] text-[12px] border-[#E5E4E0] w-[140px]" />
-        </div>
-        <Select value={userFilter} onValueChange={setUserFilter}>
-          <SelectTrigger className="w-[160px] h-[36px] text-[13px] border-[#E5E4E0]">
-            <SelectValue placeholder="User" />
-          </SelectTrigger>
+      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-4 flex items-center gap-3 flex-wrap">
+        <Select value={filters.action || "all"} onValueChange={(v) => setFilters({ ...filters, action: v === "all" ? "" : v })}>
+          <SelectTrigger className="h-[38px] text-[13px] w-[150px]"><SelectValue placeholder="All Actions" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All Users</SelectItem>
-            {uniqueUsers.map((u) => (
-              <SelectItem key={u} value={u}>{u}</SelectItem>
-            ))}
+            <SelectItem value="all" className="text-[13px]">All Actions</SelectItem>
+            {["INSERT", "UPDATE", "DELETE"].map((a) => <SelectItem key={a} value={a} className="text-[13px]">{a}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-[140px] h-[36px] text-[13px] border-[#E5E4E0]">
-            <SelectValue placeholder="Action" />
-          </SelectTrigger>
+        <Select value={filters.table || "all"} onValueChange={(v) => setFilters({ ...filters, table: v === "all" ? "" : v })}>
+          <SelectTrigger className="h-[38px] text-[13px] w-[190px]"><SelectValue placeholder="All Modules" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All Actions</SelectItem>
-            {["Create", "Update", "Delete", "Approve", "Reject", "Login", "Logout", "Export", "View"].map((a) => (
-              <SelectItem key={a} value={a}>{a}</SelectItem>
-            ))}
+            <SelectItem value="all" className="text-[13px]">All Modules</SelectItem>
+            {AUDIT_TABLES.map((t) => <SelectItem key={t} value={t} className="text-[13px]">{MODULE_LABEL[t] ?? t}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={moduleFilter} onValueChange={setModuleFilter}>
-          <SelectTrigger className="w-[160px] h-[36px] text-[13px] border-[#E5E4E0]">
-            <SelectValue placeholder="Module" />
-          </SelectTrigger>
+        <Select value={filters.userId || "all"} onValueChange={(v) => setFilters({ ...filters, userId: v === "all" ? "" : v })}>
+          <SelectTrigger className="h-[38px] text-[13px] w-[190px]"><SelectValue placeholder="All Users" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="All">All Modules</SelectItem>
-            {uniqueModules.map((m) => (
-              <SelectItem key={m} value={m}>{m}</SelectItem>
-            ))}
+            <SelectItem value="all" className="text-[13px]">All Users</SelectItem>
+            {profiles.map((p) => <SelectItem key={p.id} value={p.id} className="text-[13px]">{p.name}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="sm" className="h-[32px] text-[12px] text-[#9C9C9C] ml-auto" onClick={() => {
-          setSearchQuery(""); setDateFrom(""); setDateTo(""); setUserFilter("All"); setActionFilter("All"); setModuleFilter("All");
-        }}>
-          Clear all
-        </Button>
+        <Input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="h-[38px] text-[13px] w-[160px]" />
+        <span className="text-[12px] text-[#9C9C9C]">to</span>
+        <Input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="h-[38px] text-[13px] w-[160px]" />
+        {(filters.action || filters.table || filters.userId || filters.from || filters.to) && (
+          <button onClick={() => setFilters({ action: "", table: "", userId: "", from: "", to: "" })} className="text-[12px] text-[#D4A017] font-medium hover:underline">Clear all</button>
+        )}
       </div>
 
-      {/* Audit Log Table */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#FAFAF8] border-b border-[#E5E4E0]">
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Timestamp</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">User</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Action</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Module</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Employee Affected</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Details</th>
-                <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">IP Address</th>
-                <th className="w-[60px]"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageLogs.map((log) => {
-                const actionColors = actionBadgeColors[log.action] || { bg: "#F5F5F5", text: "#737373" };
-                const ActionIcon = actionIconMap[log.action] || Eye;
-                const modColors = moduleColors[log.module] || { bg: "#F5F5F5", text: "#737373" };
-                const isExpanded = expandedRow === log.id;
-
-                return (
-                  <>
-                    <tr
-                      key={log.id}
-                      onClick={() => toggleRow(log.id)}
-                      className={cn(
-                        "border-b border-[#E5E4E0] hover:bg-[#FAFAF8] cursor-pointer transition-colors",
-                        log.action === "Delete" && "border-l-2 border-l-[#B91C1C]",
-                        log.action === "Login" || log.action === "Logout" ? "bg-[#FAFAFA]" : "bg-white"
-                      )}
-                      style={{ height: "56px" }}
-                    >
-                      <td className="px-4 py-3 text-[12px] font-medium text-[#1A1A1A] whitespace-nowrap">
-                        {format(parseISO(log.timestamp), "dd MMM yyyy, HH:mm")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[10px] font-semibold">
-                            {getInitials(log.user.name)}
-                          </div>
-                          <div>
-                            <div className="text-[13px] font-medium text-[#1A1A1A] leading-tight">{log.user.name}</div>
-                            <div className="text-[10px] text-[#9C9C9C]">{log.user.role}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-[11px] font-semibold h-[22px] border-0 gap-1" style={{ backgroundColor: actionColors.bg, color: actionColors.text }}>
-                          <ActionIcon className="w-3 h-3" /> {log.action}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-[11px] h-[22px] border-0" style={{ backgroundColor: modColors.bg, color: modColors.text }}>
-                          {log.module}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-[13px] text-[#1A1A1A]">
-                        {log.employee ? (
-                          <span className="text-[#D4A017] hover:underline">{log.employee.name} <span className="text-[#9C9C9C] text-[11px]">({log.employee.code})</span></span>
-                        ) : (
-                          <span className="text-[#9C9C9C]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-[12px] text-[#525252] max-w-[200px] truncate" title={log.details}>
-                        {log.details}
-                      </td>
-                      <td className="px-4 py-3 text-[12px] text-[#9C9C9C] font-mono whitespace-nowrap">{log.ipAddress}</td>
-                      <td className="px-2 py-3">
-                        {isExpanded ? <ChevronUp className="w-4 h-4 text-[#9C9C9C]" /> : <ChevronDown className="w-4 h-4 text-[#9C9C9C]" />}
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={8} className="px-4 py-3 bg-[#FAFAF8]">
-                          <div className="bg-white rounded-lg border border-[#E5E4E0] p-4 space-y-3">
-                            {/* Full details */}
-                            <div>
-                              <h4 className="text-[13px] font-semibold text-[#1A1A1A] mb-1">Full Details</h4>
-                              <p className="text-[12px] text-[#525252]">{log.details}</p>
-                            </div>
-                            {/* Before/After comparison */}
-                            {log.previousValue !== null && log.newValue !== null && (
-                              <div>
-                                <h4 className="text-[13px] font-semibold text-[#1A1A1A] mb-2">Change Comparison</h4>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div className="bg-[#FEF2F2] rounded-lg p-3 border border-[#B91C1C]/20">
-                                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[#B91C1C] mb-1">Previous Value</div>
-                                    <div className="text-[13px] text-[#1A1A1A]">{log.previousValue}</div>
-                                  </div>
-                                  <div className="bg-[#E8F5EC] rounded-lg p-3 border border-[#1B7A43]/20">
-                                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[#1B7A43] mb-1">New Value</div>
-                                    <div className="text-[13px] text-[#1A1A1A]">{log.newValue}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            {/* Metadata */}
-                            <div className="flex items-center gap-6 text-[11px] text-[#9C9C9C] pt-2 border-t border-[#E5E4E0]">
-                              <span>Session: <span className="font-mono">{log.sessionId}</span></span>
-                              <span>Log ID: <span className="font-mono">{log.id}</span></span>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-              {pageLogs.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="text-center py-12">
-                    <Shield className="w-12 h-12 mx-auto mb-3 text-[#9C9C9C] opacity-40" />
-                    <p className="text-[16px] font-semibold text-[#1A1A1A]">No audit logs found</p>
-                    <p className="text-[13px] text-[#525252]">Try adjusting your filters</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E4E0]">
-          <div className="text-[12px] text-[#525252]">
-            Showing {startIdx + 1}-{endIdx} of {totalLogs} results
+        {loading ? (
+          <div className="py-20 flex flex-col items-center gap-3">
+            <div className="w-7 h-7 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+            <p className="text-[13px] text-[#9C9C9C]">Loading audit trail...</p>
           </div>
+        ) : rows.length === 0 ? (
+          <div className="py-20 text-center">
+            <ShieldCheck className="w-8 h-8 text-[#C4C3BF] mx-auto mb-2" />
+            <p className="text-[13px] text-[#9C9C9C]">No audit events match these filters</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#E5E4E0]">
+            <div className="grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-2.5 bg-[#FAFAF8] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">
+              <span>Timestamp</span><span>User</span><span>Action</span><span>Module</span><span>Subject</span><span></span>
+            </div>
+            {rows.map((r) => (
+              <div key={r.id}>
+                <button onClick={() => setExpanded(expanded === r.id ? null : r.id)}
+                  className="w-full grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-3 items-center text-left hover:bg-[#FAFAF8] transition-colors">
+                  <span className="text-[12px] text-[#525252]">{fmt(r.createdAt)}</span>
+                  <span className="text-[13px] text-[#1A1A1A] truncate">{r.performedByName}</span>
+                  <span><span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold", ACTION_STYLE[r.action])}>{r.action}</span></span>
+                  <span className="text-[12px] text-[#525252]">{MODULE_LABEL[r.tableName] ?? r.tableName}</span>
+                  <span className="text-[13px] text-[#1A1A1A] truncate">{r.subject ?? <span className="text-[#C4C3BF] font-mono text-[11px]">{r.recordId?.slice(0, 8) ?? "—"}</span>}</span>
+                  <ChevronDown className={cn("w-4 h-4 text-[#9C9C9C] transition-transform", expanded === r.id && "rotate-180")} />
+                </button>
+                {expanded === r.id && <DiffBlock row={r} />}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-[#E5E4E0]">
+          <span className="text-[12px] text-[#9C9C9C]">Showing {rows.length ? page * pageSize + 1 : 0}–{page * pageSize + rows.length} of {total.toLocaleString()} events</span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-[32px] text-[12px]" disabled={currentPage === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-              Previous
-            </Button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const p = i + 1;
-              return (
-                <Button
-                  key={p}
-                  variant={currentPage === p ? "default" : "outline"}
-                  size="sm"
-                  className={cn("h-[32px] w-[32px] text-[12px] p-0", currentPage === p ? "bg-[#D4A017] hover:bg-[#A67C0A] text-white" : "border-[#E5E4E0]")}
-                  onClick={() => setPage(p)}
-                >
-                  {p}
-                </Button>
-              );
-            })}
-            <Button variant="outline" size="sm" className="h-[32px] text-[12px]" disabled={currentPage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-              Next
-            </Button>
+            <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)} className="h-8 text-[12px]">Previous</Button>
+            <span className="text-[12px] text-[#525252]">Page {page + 1} of {pages.toLocaleString()}</span>
+            <Button variant="outline" size="sm" disabled={page >= pages - 1} onClick={() => setPage(page + 1)} className="h-8 text-[12px]">Next</Button>
           </div>
-          <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-            <SelectTrigger className="w-[80px] h-[32px] text-[12px] border-[#E5E4E0]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
-
-      {/* Export Modal */}
-      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
-        <DialogContent className="max-w-[520px] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b border-[#E5E4E0]">
-            <DialogTitle className="text-[20px] font-semibold">Export Audit Logs</DialogTitle>
-          </DialogHeader>
-          <div className="px-6 py-5 space-y-4">
-            <div>
-              <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Format</label>
-              <div className="flex gap-3">
-                {["CSV", "Excel", "PDF"].map((fmt) => (
-                  <button key={fmt} className={cn("px-4 py-2 rounded-lg border text-[13px] font-medium transition-colors", fmt === "CSV" ? "border-[#D4A017] bg-[rgba(212,160,23,0.1)] text-[#D4A017]" : "border-[#E5E4E0] text-[#525252] hover:border-[#C4C3BF]")}>
-                    {fmt}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Range (From)</label>
-                <Input type="date" className="h-[40px] text-[13px] border-[#E5E4E0]" />
-              </div>
-              <div>
-                <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Range (To)</label>
-                <Input type="date" className="h-[40px] text-[13px] border-[#E5E4E0]" />
-              </div>
-            </div>
-            <div>
-              <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Filter Scope</label>
-              <Select defaultValue="filtered">
-                <SelectTrigger className="h-[40px] text-[13px] border-[#E5E4E0]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="filtered">Currently filtered logs ({totalLogs})</SelectItem>
-                  <SelectItem value="all">All logs ({allLogs.length})</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-[#E5E4E0] flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setExportOpen(false)} className="h-[40px] text-[13px]">Cancel</Button>
-            <Button onClick={() => setExportOpen(false)} className="h-[40px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px] gap-2">
-              <Download className="w-4 h-4" /> Export
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithMicrosoft } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [authError, setAuthError] = useState<string | null>(null);
   const [shakeField, setShakeField] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export default function Login() {
         <div className="relative z-10 flex flex-col items-center text-center px-12 animate-fade-in-up">
           <img src="/magaya_logo.png" alt="Magaya Mining" className="w-[200px] h-auto mb-8" />
           <h2 className="text-[22px] font-semibold text-white mb-2">Employee Lifecycle Management System</h2>
-          <p className="text-[14px] text-white/60 mb-12">Streamlining workforce operations across 11 sites</p>
+          <p className="text-[14px] text-white/60 mb-12">Streamlining workforce operations across all Magaya sites</p>
           <div className="flex flex-col gap-5 text-left">
             {["Comprehensive onboarding & offboarding workflows", "Cross-site employee transfers", "Role-based access & audit compliance"].map((text, i) => (
               <div key={i} className="flex items-center gap-3"><CheckCircle className="w-4 h-4 text-[#D4A017] shrink-0" /><span className="text-[13px] text-white/70">{text}</span></div>
@@ -94,6 +95,35 @@ export default function Login() {
               {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Sign In<ArrowRight className="w-[18px] h-[18px]" /></>}
             </button>
           </form>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-[#E5E4E0]" />
+          <span className="text-[11px] text-[#9C9C9C] uppercase tracking-[0.08em]">or</span>
+          <div className="flex-1 h-px bg-[#E5E4E0]" />
+        </div>
+
+        <button type="button" disabled={ssoLoading || loading}
+          onClick={async () => {
+            setAuthError(null);
+            setSsoLoading(true);
+            const err = await loginWithMicrosoft();
+            if (err) { setAuthError(err); setSsoLoading(false); }
+            // on success the browser navigates to Microsoft; no state reset needed
+          }}
+          className={cn(
+            "w-full h-[46px] rounded-lg border border-[#E5E4E0] bg-white flex items-center justify-center gap-2.5",
+            "text-[14px] font-medium text-[#1A1A1A] transition-colors hover:bg-[#FAFAF8]",
+            (ssoLoading || loading) && "opacity-60 cursor-not-allowed"
+          )}>
+          <svg width="17" height="17" viewBox="0 0 21 21" aria-hidden="true">
+            <rect x="0" y="0" width="10" height="10" fill="#F25022" />
+            <rect x="11" y="0" width="10" height="10" fill="#7FBA00" />
+            <rect x="0" y="11" width="10" height="10" fill="#00A4EF" />
+            <rect x="11" y="11" width="10" height="10" fill="#FFB900" />
+          </svg>
+          {ssoLoading ? "Redirecting to Microsoft..." : "Sign in with Microsoft"}
+        </button>
+        <p className="text-[11px] text-[#9C9C9C] text-center mt-3">Use your Magaya Microsoft 365 account. Access requires an ELMS profile set up by IT.</p>
           <p className="text-center text-[11px] text-[#9C9C9C] mt-8">Access is provisioned by HQ IT. Your role and site are assigned to your account.</p>
           <p className="text-center text-[11px] text-[#9C9C9C] mt-2">ELMS v2.0</p>
         </div>

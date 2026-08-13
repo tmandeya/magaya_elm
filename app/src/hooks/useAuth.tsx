@@ -13,6 +13,7 @@ interface AuthContextType {
   /** True while the initial session is being restored. */
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ error: string | null }>;
+  loginWithMicrosoft: () => Promise<string | null>;
   logout: () => Promise<void>;
   /** True when the user arrived via a password-recovery link and must set a new password. */
   isPasswordRecovery: boolean;
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   login: async () => ({ error: "Auth not initialised" }),
+  loginWithMicrosoft: async () => "Auth not initialised",
   logout: async () => {},
   isPasswordRecovery: false,
   completePasswordRecovery: () => {},
@@ -104,6 +106,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [loadProfile]);
 
+  const loginWithMicrosoft = useCallback(async (): Promise<string | null> => {
+    // Entra ID (Azure) OAuth. On return, detectSessionInUrl consumes the
+    // tokens and onAuthStateChange loads the ELMS profile. Users without a
+    // provisioned profile are signed out by the existing deny-by-default gate.
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "azure",
+      options: {
+        scopes: "openid profile email",
+        redirectTo: window.location.origin,
+      },
+    });
+    return error ? error.message : null; // on success the browser redirects away
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -127,7 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completePasswordRecovery = useCallback(() => setIsPasswordRecovery(false), []);
 
   return (
-    <AuthContext.Provider value={{ user, currentRole, siteUuid, isAuthenticated: !!user, isLoading, login, logout, isPasswordRecovery, completePasswordRecovery }}>
+    <AuthContext.Provider value={{ user, currentRole, siteUuid, isAuthenticated: !!user, isLoading, login,
+    loginWithMicrosoft, logout, isPasswordRecovery, completePasswordRecovery }}>
       {children}
     </AuthContext.Provider>
   );

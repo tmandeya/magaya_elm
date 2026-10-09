@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, UserPlus, UserMinus, ArrowLeftRight, Building2, BarChart3, ShieldCheck, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Users, UserPlus, UserMinus, ArrowLeftRight, Building2, BarChart3, ShieldCheck, Settings, ChevronLeft, ChevronRight, GraduationCap, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { roleDefinitions } from "@/lib/uiConstants";
 import type { UserRole } from "@/types";
@@ -17,6 +17,10 @@ const navSections: NavSection[] = [
     { label: "Offboarding Hub", icon: UserMinus, path: "/offboarding", navKey: "offboarding" },
     { label: "Transfer Hub", icon: ArrowLeftRight, path: "/transfers", navKey: "transfers" },
   ]},
+  { label: "Talent", items: [
+    { label: "Talent Programmes", icon: GraduationCap, path: "/talent", navKey: "talent" },
+    { label: "Recruitment", icon: Briefcase, path: "/recruitment", navKey: "recruitment" },
+  ] },
   { label: "Administration", items: [
     { label: "Sites", icon: Building2, path: "/sites", navKey: "sites" },
     { label: "Reports", icon: BarChart3, path: "/reports", navKey: "reports" },

@@ -18,6 +18,10 @@ const Sites = lazy(() => import("@/pages/Sites"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const AuditLogs = lazy(() => import("@/pages/AuditLogs"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const Talent = lazy(() => import("@/pages/Talent"));
+const Recruitment = lazy(() => import("@/pages/Recruitment"));
+const ExamPortal = lazy(() => import("@/pages/ExamPortal"));
+const Careers = lazy(() => import("@/pages/Careers"));
 
 function LoadingFallback() {
   return (
@@ -48,6 +52,11 @@ function AppRoutes() {
   if (isPasswordRecovery) return <ResetPassword />;
   return (
     <Routes>
+      {/* Public pages: no login required */}
+      <Route path="/exam" element={<Suspense fallback={<LoadingFallback />}><ExamPortal /></Suspense>} />
+      <Route path="/exam/:code" element={<Suspense fallback={<LoadingFallback />}><ExamPortal /></Suspense>} />
+      <Route path="/careers" element={<Suspense fallback={<LoadingFallback />}><Careers /></Suspense>} />
+      <Route path="/careers/:slug" element={<Suspense fallback={<LoadingFallback />}><Careers /></Suspense>} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" replace />}>
         <Route path="/dashboard" element={<Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense>} />
@@ -63,6 +72,8 @@ function AppRoutes() {
         <Route path="/reports" element={<Suspense fallback={<LoadingFallback />}><Reports /></Suspense>} />
         <Route path="/audit-logs" element={<Suspense fallback={<LoadingFallback />}><AuditLogs /></Suspense>} />
         <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
+        <Route path="/talent" element={<Suspense fallback={<LoadingFallback />}><Talent /></Suspense>} />
+        <Route path="/recruitment" element={<Suspense fallback={<LoadingFallback />}><Recruitment /></Suspense>} />
       </Route>
       <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
     </Routes>

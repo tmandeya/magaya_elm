@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard", "/employees": "Employee Master Data", "/onboarding": "Onboarding Hub",
   "/offboarding": "Offboarding Hub", "/transfers": "Transfer Hub", "/sites": "Sites Management",
-  "/reports": "Reports & Analytics", "/audit-logs": "Audit Logs", "/settings": "Settings",
+  "/reports": "Reports & Analytics", "/audit-logs": "Audit Logs", "/settings": "Settings", "/talent": "Talent Programmes", "/recruitment": "Recruitment",
 };
 
 function buildBreadcrumb(pathname: string) {
@@ -25,6 +25,8 @@ function buildBreadcrumb(pathname: string) {
   else if (pathname === "/reports") crumbs.push({ label: "Reports" });
   else if (pathname === "/audit-logs") crumbs.push({ label: "Audit Logs" });
   else if (pathname === "/settings") crumbs.push({ label: "Settings" });
+  else if (pathname === "/talent") crumbs.push({ label: "Talent Programmes" });
+  else if (pathname === "/recruitment") crumbs.push({ label: "Recruitment" });
   return crumbs;
 }
 

@@ -198,7 +198,7 @@ export default function DataMigration() {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-[16px] font-semibold text-[#1A1A1A]">Employee Data Migration</h3>
+        <h3 className="text-[16px] font-semibold text-[#000000]">Employee Data Migration</h3>
         <p className="text-[13px] text-[#525252] mt-1">
           Upload the HR master-data export (.xlsx or .csv). Columns are matched to the approved field template automatically.
           Payroll and banking fields are stored in a restricted table visible to HR roles only.
@@ -208,7 +208,7 @@ export default function DataMigration() {
       <div className="flex items-center gap-3 flex-wrap">
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = ""; }} />
-        <Button onClick={() => fileRef.current?.click()} disabled={parsing || importing} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white">
+        <Button onClick={() => fileRef.current?.click()} disabled={parsing || importing} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black">
           {parsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
           {fileName ? "Choose a different file" : "Choose file"}
         </Button>
@@ -216,21 +216,21 @@ export default function DataMigration() {
           <Download className="w-4 h-4 mr-2" /> Download template
         </Button>
         {fileName && (
-          <span className="flex items-center gap-2 text-[13px] text-[#1A1A1A]"><FileSpreadsheet className="w-4 h-4 text-[#1B7A43]" /> {fileName} · {rows.length} row{rows.length === 1 ? "" : "s"}</span>
+          <span className="flex items-center gap-2 text-[13px] text-[#000000]"><FileSpreadsheet className="w-4 h-4 text-[#1B7A43]" /> {fileName} · {rows.length} row{rows.length === 1 ? "" : "s"}</span>
         )}
       </div>
 
-      {parseError && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{parseError}</div>}
+      {parseError && <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{parseError}</div>}
 
       {rows.length > 0 && !result && (
         <>
           {unmappedHeaders.length > 0 && (
-            <div className="px-4 py-3 rounded-[10px] border border-[#C27A06]/30 bg-[#FDF3E0] text-[13px] text-[#C27A06]">
+            <div className="px-4 py-3 rounded-[6px] border border-[#C27A06]/30 bg-[#FDF3E0] text-[13px] text-[#C27A06]">
               Unrecognised columns (will be ignored): {unmappedHeaders.join(", ")}
             </div>
           )}
           {validation.problems.map((p, i) => (
-            <div key={i} className="px-4 py-3 rounded-[10px] border border-[#C27A06]/30 bg-[#FDF3E0] text-[13px] text-[#C27A06] flex items-center gap-2">
+            <div key={i} className="px-4 py-3 rounded-[6px] border border-[#C27A06]/30 bg-[#FDF3E0] text-[13px] text-[#C27A06] flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" /> {p}
             </div>
           ))}
@@ -257,24 +257,24 @@ export default function DataMigration() {
             </div>
           </div>
 
-          <div className="border border-[#E5E4E0] rounded-[10px] overflow-x-auto">
+          <div className="border border-[#DDDDDD] rounded-[6px] overflow-x-auto">
             <table className="w-full text-[12px]">
-              <thead className="bg-[#FAFAF8]">
+              <thead className="bg-[#FAFAFA]">
                 <tr>{previewCols.map((c) => <th key={c} className="px-3 py-2 text-left font-semibold text-[#525252] uppercase tracking-[0.04em] whitespace-nowrap">{c}</th>)}</tr>
               </thead>
-              <tbody className="divide-y divide-[#E5E4E0]">
+              <tbody className="divide-y divide-[#DDDDDD]">
                 {rows.slice(0, 8).map((r, i) => (
                   <tr key={i}>
                     {previewCols.map((c) => (
-                      <td key={c} className="px-3 py-2 text-[#1A1A1A] whitespace-nowrap">
-                        {FINANCIAL_KEYS.has(c) && r[c] ? "•••••" : (r[c] || <span className="text-[#C4C3BF]">—</span>)}
+                      <td key={c} className="px-3 py-2 text-[#000000] whitespace-nowrap">
+                        {FINANCIAL_KEYS.has(c) && r[c] ? "•••••" : (r[c] || <span className="text-[#C4C4C4]">—</span>)}
                       </td>
                     ))}
                   </tr>
                 ))}
               </tbody>
             </table>
-            {rows.length > 8 && <div className="px-3 py-2 text-[12px] text-[#9C9C9C] border-t border-[#E5E4E0]">…and {rows.length - 8} more rows</div>}
+            {rows.length > 8 && <div className="px-3 py-2 text-[12px] text-[#9C9C9C] border-t border-[#DDDDDD]">…and {rows.length - 8} more rows</div>}
           </div>
         </>
       )}
@@ -282,35 +282,35 @@ export default function DataMigration() {
       {result && (
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-4">
-            <div className="px-4 py-4 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-center">
+            <div className="px-4 py-4 rounded-[6px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-center">
               <div className="text-[26px] font-bold text-[#1B7A43]">{result.inserted}</div>
               <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">New records added</div>
             </div>
-            <div className="px-4 py-4 rounded-[10px] border border-[#1E6BA3]/30 bg-[#1E6BA3]/5 text-center">
+            <div className="px-4 py-4 rounded-[6px] border border-[#1E6BA3]/30 bg-[#1E6BA3]/5 text-center">
               <div className="text-[26px] font-bold text-[#1E6BA3]">{result.updated}</div>
               <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">Updated</div>
             </div>
-            <div className="px-4 py-4 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-center">
+            <div className="px-4 py-4 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-center">
               <div className="text-[26px] font-bold text-[#B91C1C]">{result.errors.length}</div>
               <div className="text-[12px] font-medium text-[#525252] uppercase tracking-[0.05em] mt-1">Failed</div>
             </div>
           </div>
           {result.warnings.length > 0 && (
-            <div className="border border-[#C27A06]/30 rounded-[10px] overflow-hidden">
+            <div className="border border-[#C27A06]/30 rounded-[6px] overflow-hidden">
               <div className="px-4 py-2 bg-[#FDF3E0] text-[13px] font-semibold text-[#C27A06]">Matched by National ID (updated, existing Employee ID kept)</div>
-              <div className="max-h-[180px] overflow-y-auto divide-y divide-[#E5E4E0]">
+              <div className="max-h-[180px] overflow-y-auto divide-y divide-[#DDDDDD]">
                 {result.warnings.map((w, i) => (
-                  <div key={i} className="px-4 py-2 text-[12px] text-[#1A1A1A]">Row {w.row} ({w.code}): <span className="text-[#C27A06]">{w.message}</span></div>
+                  <div key={i} className="px-4 py-2 text-[12px] text-[#000000]">Row {w.row} ({w.code}): <span className="text-[#C27A06]">{w.message}</span></div>
                 ))}
               </div>
             </div>
           )}
           {result.errors.length > 0 && (
-            <div className="border border-[#B91C1C]/30 rounded-[10px] overflow-hidden">
+            <div className="border border-[#B91C1C]/30 rounded-[6px] overflow-hidden">
               <div className="px-4 py-2 bg-[#B91C1C]/5 text-[13px] font-semibold text-[#B91C1C]">Rows that could not be imported</div>
-              <div className="max-h-[240px] overflow-y-auto divide-y divide-[#E5E4E0]">
+              <div className="max-h-[240px] overflow-y-auto divide-y divide-[#DDDDDD]">
                 {result.errors.map((e, i) => (
-                  <div key={i} className="px-4 py-2 text-[12px] text-[#1A1A1A]">Row {e.row} ({e.code}): <span className="text-[#B91C1C]">{e.message}</span></div>
+                  <div key={i} className="px-4 py-2 text-[12px] text-[#000000]">Row {e.row} ({e.code}): <span className="text-[#B91C1C]">{e.message}</span></div>
                 ))}
               </div>
             </div>

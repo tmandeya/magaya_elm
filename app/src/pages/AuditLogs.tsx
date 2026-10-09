@@ -30,14 +30,14 @@ function DiffBlock({ row }: { row: AuditRow }) {
     }
   }
   return (
-    <div className="px-5 py-4 bg-[#FAFAF8] border-t border-[#E5E4E0] text-[12px] space-y-2">
-      <div className="text-[#737373]">Record: <span className="font-mono text-[11px]">{row.recordId ?? "—"}</span>{row.siteName ? ` · Site: ${row.siteName}` : ""}</div>
+    <div className="px-5 py-4 bg-[#FAFAFA] border-t border-[#DDDDDD] text-[12px] space-y-2">
+      <div className="text-[#6B6B6B]">Record: <span className="font-mono text-[11px]">{row.recordId ?? "—"}</span>{row.siteName ? ` · Site: ${row.siteName}` : ""}</div>
       {row.action === "UPDATE" ? (
         changed.length > 0 ? (
           <div className="space-y-1">
             {changed.slice(0, 12).map((c) => (
               <div key={c.key} className="flex gap-2 flex-wrap">
-                <span className="font-medium text-[#1A1A1A] min-w-[160px]">{c.key}</span>
+                <span className="font-medium text-[#000000] min-w-[160px]">{c.key}</span>
                 <span className="text-[#B91C1C] line-through break-all">{c.before}</span>
                 <span className="text-[#1B7A43] break-all">{c.after}</span>
               </div>
@@ -73,29 +73,29 @@ export default function AuditLogs() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Audit Logs</h1>
+          <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Audit Logs</h1>
           <p className="text-[13px] text-[#525252] mt-1">Immutable system activity and compliance trail</p>
         </div>
         <Button variant="outline" onClick={exportCsv} className="text-[13px]"><Download className="w-4 h-4 mr-1.5" /> Export page (CSV)</Button>
       </div>
 
-      {error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
+      {error && <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Events", value: total, color: "#1A1A1A" },
+          { label: "Total Events", value: total, color: "#000000" },
           { label: "Creates", value: stats.inserts, color: "#1B7A43" },
           { label: "Updates", value: stats.updates, color: "#1E6BA3" },
           { label: "Deletes", value: stats.deletes, color: "#B91C1C" },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-[10px] border border-[#E5E4E0] p-4">
+          <div key={c.label} className="bg-white rounded-[6px] border border-[#DDDDDD] p-4">
             <div className="text-[24px] font-bold" style={{ color: c.color }}>{c.value.toLocaleString()}</div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#9C9C9C] mt-0.5">{c.label}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-4 flex items-center gap-3 flex-wrap">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-4 flex items-center gap-3 flex-wrap">
         <Select value={filters.action || "all"} onValueChange={(v) => setFilters({ ...filters, action: v === "all" ? "" : v })}>
           <SelectTrigger className="h-[38px] text-[13px] w-[150px]"><SelectValue placeholder="All Actions" /></SelectTrigger>
           <SelectContent>
@@ -121,35 +121,35 @@ export default function AuditLogs() {
         <span className="text-[12px] text-[#9C9C9C]">to</span>
         <Input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="h-[38px] text-[13px] w-[160px]" />
         {(filters.action || filters.table || filters.userId || filters.from || filters.to) && (
-          <button onClick={() => setFilters({ action: "", table: "", userId: "", from: "", to: "" })} className="text-[12px] text-[#D4A017] font-medium hover:underline">Clear all</button>
+          <button onClick={() => setFilters({ action: "", table: "", userId: "", from: "", to: "" })} className="text-[12px] text-[#8C7600] font-medium hover:underline">Clear all</button>
         )}
       </div>
 
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
         {loading ? (
           <div className="py-20 flex flex-col items-center gap-3">
-            <div className="w-7 h-7 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+            <div className="w-7 h-7 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
             <p className="text-[13px] text-[#9C9C9C]">Loading audit trail...</p>
           </div>
         ) : rows.length === 0 ? (
           <div className="py-20 text-center">
-            <ShieldCheck className="w-8 h-8 text-[#C4C3BF] mx-auto mb-2" />
+            <ShieldCheck className="w-8 h-8 text-[#C4C4C4] mx-auto mb-2" />
             <p className="text-[13px] text-[#9C9C9C]">No audit events match these filters</p>
           </div>
         ) : (
-          <div className="divide-y divide-[#E5E4E0]">
-            <div className="grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-2.5 bg-[#FAFAF8] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">
+          <div className="divide-y divide-[#DDDDDD]">
+            <div className="grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-2.5 bg-[#FAFAFA] text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">
               <span>Timestamp</span><span>User</span><span>Action</span><span>Module</span><span>Subject</span><span></span>
             </div>
             {rows.map((r) => (
               <div key={r.id}>
                 <button onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-                  className="w-full grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-3 items-center text-left hover:bg-[#FAFAF8] transition-colors">
+                  className="w-full grid grid-cols-[170px_180px_100px_150px_1fr_40px] gap-3 px-5 py-3 items-center text-left hover:bg-[#FAFAFA] transition-colors">
                   <span className="text-[12px] text-[#525252]">{fmt(r.createdAt)}</span>
-                  <span className="text-[13px] text-[#1A1A1A] truncate">{r.performedByName}</span>
+                  <span className="text-[13px] text-[#000000] truncate">{r.performedByName}</span>
                   <span><span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold", ACTION_STYLE[r.action])}>{r.action}</span></span>
                   <span className="text-[12px] text-[#525252]">{MODULE_LABEL[r.tableName] ?? r.tableName}</span>
-                  <span className="text-[13px] text-[#1A1A1A] truncate">{r.subject ?? <span className="text-[#C4C3BF] font-mono text-[11px]">{r.recordId?.slice(0, 8) ?? "—"}</span>}</span>
+                  <span className="text-[13px] text-[#000000] truncate">{r.subject ?? <span className="text-[#C4C4C4] font-mono text-[11px]">{r.recordId?.slice(0, 8) ?? "—"}</span>}</span>
                   <ChevronDown className={cn("w-4 h-4 text-[#9C9C9C] transition-transform", expanded === r.id && "rotate-180")} />
                 </button>
                 {expanded === r.id && <DiffBlock row={r} />}
@@ -157,7 +157,7 @@ export default function AuditLogs() {
             ))}
           </div>
         )}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[#E5E4E0]">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-[#DDDDDD]">
           <span className="text-[12px] text-[#9C9C9C]">Showing {rows.length ? page * pageSize + 1 : 0}–{page * pageSize + rows.length} of {total.toLocaleString()} events</span>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)} className="h-8 text-[12px]">Previous</Button>

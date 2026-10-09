@@ -20,22 +20,22 @@ const RANGES = [
   { key: "90", label: "90d", days: 90 },
   { key: "all", label: "All time", days: null as number | null },
 ];
-const PIE_COLORS = ["#D4A017", "#1E6BA3", "#1B7A43", "#B91C1C", "#7C3AED", "#C27A06", "#0F766E", "#9C9C9C"];
+const PIE_COLORS = ["#EDC817", "#1E6BA3", "#1B7A43", "#B91C1C", "#7C3AED", "#C27A06", "#0F766E", "#9C9C9C"];
 
 function KpiCard({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-      <div className="text-[26px] font-bold text-[#1A1A1A]">{typeof value === "number" ? value.toLocaleString() : value}</div>
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+      <div className="text-[26px] font-bold text-[#000000]">{typeof value === "number" ? value.toLocaleString() : value}</div>
       <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#9C9C9C] mt-1">{label}</div>
-      {sub && <div className="text-[11px] text-[#737373] mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11px] text-[#6B6B6B] mt-0.5">{sub}</div>}
     </div>
   );
 }
 
 function BarPanel({ title, data, height = 260, horizontal = false }: { title: string; data: NameCount[]; height?: number; horizontal?: boolean }) {
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-      <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-3">{title}</h3>
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+      <h3 className="text-[14px] font-semibold text-[#000000] mb-3">{title}</h3>
       {data.length === 0 ? <p className="text-[12px] text-[#9C9C9C] py-8 text-center">No data yet</p> : (
         <ResponsiveContainer width="100%" height={height}>
           {horizontal ? (
@@ -43,14 +43,14 @@ function BarPanel({ title, data, height = 260, horizontal = false }: { title: st
               <XAxis type="number" hide />
               <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
-              <Bar dataKey="count" fill="#D4A017" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" fill="#EDC817" radius={[0, 4, 4, 0]} />
             </BarChart>
           ) : (
             <BarChart data={data}>
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#525252" }} angle={-35} textAnchor="end" height={70} axisLine={false} tickLine={false} interval={0} />
               <YAxis tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
-              <Bar dataKey="count" fill="#D4A017" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#EDC817" radius={[4, 4, 0, 0]} />
             </BarChart>
           )}
         </ResponsiveContainer>
@@ -61,8 +61,8 @@ function BarPanel({ title, data, height = 260, horizontal = false }: { title: st
 
 function PiePanel({ title, data }: { title: string; data: NameCount[] }) {
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-      <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-3">{title}</h3>
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+      <h3 className="text-[14px] font-semibold text-[#000000] mb-3">{title}</h3>
       {data.length === 0 ? <p className="text-[12px] text-[#9C9C9C] py-8 text-center">No data yet</p> : (
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
@@ -89,17 +89,17 @@ function WorkflowReport({ title, r }: { title: string; r: WorkflowTypeReport }) 
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <BarPanel title={`${title} by Site`} data={r.bySite} horizontal height={Math.max(160, r.bySite.length * 34)} />
-        <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-          <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-3">Recent {title}</h3>
+        <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+          <h3 className="text-[14px] font-semibold text-[#000000] mb-3">Recent {title}</h3>
           {r.rows.length === 0 ? (
             <p className="text-[12px] text-[#9C9C9C] py-8 text-center">No {title.toLowerCase()} workflows in this period — initiate one from the {title} Hub to see it here.</p>
           ) : (
-            <div className="divide-y divide-[#F0EFEB] max-h-[300px] overflow-y-auto">
+            <div className="divide-y divide-[#EEEEEE] max-h-[300px] overflow-y-auto">
               {r.rows.map((row) => (
                 <div key={row.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[13px] text-[#1A1A1A] truncate">{row.employee} <span className="text-[#9C9C9C]">({row.code})</span></div>
-                    <div className="text-[11px] text-[#737373] truncate">{row.site}{row.extra ? ` · ${row.extra}` : ""} · started {row.started}</div>
+                    <div className="text-[13px] text-[#000000] truncate">{row.employee} <span className="text-[#9C9C9C]">({row.code})</span></div>
+                    <div className="text-[11px] text-[#6B6B6B] truncate">{row.site}{row.extra ? ` · ${row.extra}` : ""} · started {row.started}</div>
                   </div>
                   <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0", row.status === "Completed" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#FDF3E0] text-[#C27A06]")}>{row.status}</span>
                 </div>
@@ -143,20 +143,20 @@ export default function Reports() {
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Reports & Analytics</h1>
+          <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Reports & Analytics</h1>
           <p className="text-[13px] text-[#525252] mt-1">Live workforce analytics and exportable reports</p>
         </div>
         <Button variant="outline" onClick={exportCurrent} disabled={!data} className="text-[13px]"><Download className="w-4 h-4 mr-1.5" /> Export CSV</Button>
       </div>
 
-      {error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
+      {error && <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
 
       <div className="flex gap-5 items-start flex-col lg:flex-row">
-        <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-2 w-full lg:w-[210px] shrink-0">
+        <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-2 w-full lg:w-[210px] shrink-0">
           {CATEGORIES.map((c) => (
             <button key={c.key} onClick={() => setCategory(c.key)}
               className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-left",
-                category === c.key ? "bg-[#FDF6E3] text-[#A67C0A] border-l-2 border-[#D4A017]" : "text-[#525252] hover:bg-[#FAFAF8]")}>
+                category === c.key ? "bg-[#FDF8DC] text-[#8C7600] border-l-2 border-[#EDC817]" : "text-[#525252] hover:bg-[#FAFAFA]")}>
               <c.icon className="w-4 h-4" /> {c.label}
             </button>
           ))}
@@ -168,7 +168,7 @@ export default function Reports() {
               {RANGES.map((r) => (
                 <button key={r.key} onClick={() => setRange(r.key)}
                   className={cn("px-3.5 py-1.5 rounded-full text-[12px] font-semibold border transition-colors",
-                    range === r.key ? "bg-[#D4A017] text-white border-[#D4A017]" : "bg-white text-[#525252] border-[#E5E4E0] hover:border-[#D4A017]")}>
+                    range === r.key ? "bg-[#EDC817] text-black border-[#EDC817]" : "bg-white text-[#525252] border-[#DDDDDD] hover:border-[#EDC817]")}>
                   {r.label}
                 </button>
               ))}
@@ -177,7 +177,7 @@ export default function Reports() {
 
           {loading || !data ? (
             <div className="flex flex-col items-center justify-center py-28 gap-3">
-              <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+              <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
               <p className="text-[13px] text-[#9C9C9C]">Building report from live data...</p>
             </div>
           ) : category === "census" ? (
@@ -222,17 +222,17 @@ export default function Reports() {
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <BarPanel title="Documents by Category" data={data.documents.byCategory} horizontal height={Math.max(180, data.documents.byCategory.length * 34)} />
-                <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-                  <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-3">Expiring / Expired (next 90 days)</h3>
+                <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+                  <h3 className="text-[14px] font-semibold text-[#000000] mb-3">Expiring / Expired (next 90 days)</h3>
                   {data.documents.expiring.length === 0 ? (
                     <p className="text-[12px] text-[#9C9C9C] py-8 text-center">No documents expiring — attach documents with expiry dates on employee profiles to track them here.</p>
                   ) : (
-                    <div className="divide-y divide-[#F0EFEB] max-h-[300px] overflow-y-auto">
+                    <div className="divide-y divide-[#EEEEEE] max-h-[300px] overflow-y-auto">
                       {data.documents.expiring.map((d, i) => (
                         <div key={i} className="py-2.5 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-[13px] text-[#1A1A1A] truncate">{d.employee} <span className="text-[#9C9C9C]">({d.code})</span></div>
-                            <div className="text-[11px] text-[#737373] truncate">{d.category} · {d.fileName}</div>
+                            <div className="text-[13px] text-[#000000] truncate">{d.employee} <span className="text-[#9C9C9C]">({d.code})</span></div>
+                            <div className="text-[11px] text-[#6B6B6B] truncate">{d.category} · {d.fileName}</div>
                           </div>
                           <span className={cn("text-[11px] font-semibold shrink-0", new Date(d.expiryDate) < new Date() ? "text-[#B91C1C]" : "text-[#C27A06]")}>{d.expiryDate}</span>
                         </div>

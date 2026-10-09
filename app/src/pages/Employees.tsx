@@ -30,7 +30,7 @@ const STATUS_COLORS: Record<EmployeeStatus, { bg: string; text: string; dot: str
   Onboarding: { bg: "bg-[#FDF3E0]", text: "text-[#C27A06]", dot: "bg-[#C27A06]" },
   Transferred: { bg: "bg-[#E8F2FA]", text: "text-[#1E6BA3]", dot: "bg-[#1E6BA3]" },
   Offboarding: { bg: "bg-[#FFF1F0]", text: "text-[#B91C1C]", dot: "bg-[#B91C1C]" },
-  Terminated: { bg: "bg-[#F5F5F5]", text: "text-[#737373]", dot: "bg-[#737373]" },
+  Terminated: { bg: "bg-[#F5F5F5]", text: "text-[#6B6B6B]", dot: "bg-[#6B6B6B]" },
   Archived: { bg: "bg-[#FAFAFA]", text: "text-[#9C9C9C]", dot: "bg-[#9C9C9C]" },
 };
 
@@ -63,7 +63,7 @@ function EmpAvatar({ emp, size = 32 }: { emp: ExtendedEmployee; size?: number })
     return <img src={emp.photoUrl} alt={emp.firstName} className="rounded-full object-cover" style={{ width: size, height: size }} />;
   }
   return (
-    <div className="rounded-full bg-[#D4A017] flex items-center justify-center text-white font-semibold" style={{ width: size, height: size, fontSize: size < 36 ? 11 : 14 }}>
+    <div className="rounded-full bg-[#EDC817] flex items-center justify-center text-black font-semibold" style={{ width: size, height: size, fontSize: size < 36 ? 11 : 14 }}>
       {emp.initials}
     </div>
   );
@@ -71,16 +71,16 @@ function EmpAvatar({ emp, size = 32 }: { emp: ExtendedEmployee; size?: number })
 
 // ── Sort Icon ──────────────────────────────────────────────────────────────
 function SortIcon({ field, currentField, dir }: { field: SortField; currentField: SortField; dir: SortDir }) {
-  if (field !== currentField) return <ChevronsUpDown className="w-3 h-3 text-[#C4C3BF] opacity-0 group-hover:opacity-100 transition-opacity" />;
-  return dir === "asc" ? <ChevronUp className="w-3 h-3 text-[#D4A017]" /> : <ChevronDown className="w-3 h-3 text-[#D4A017]" />;
+  if (field !== currentField) return <ChevronsUpDown className="w-3 h-3 text-[#C4C4C4] opacity-0 group-hover:opacity-100 transition-opacity" />;
+  return dir === "asc" ? <ChevronUp className="w-3 h-3 text-[#8C7600]" /> : <ChevronDown className="w-3 h-3 text-[#8C7600]" />;
 }
 
 // ── Filter Pill ────────────────────────────────────────────────────────────
 function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium bg-[rgba(212,160,23,0.08)] border border-[rgba(212,160,23,0.2)] text-[#D4A017]">
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[12px] font-medium bg-[rgba(237, 200, 23,0.08)] border border-[rgba(237, 200, 23,0.2)] text-[#8C7600]">
       {label}
-      <button onClick={onRemove} className="hover:text-[#A67C0A] transition-colors"><X className="w-3 h-3" /></button>
+      <button onClick={onRemove} className="hover:text-[#8C7600] transition-colors"><X className="w-3 h-3" /></button>
     </span>
   );
 }
@@ -271,15 +271,15 @@ export default function Employees() {
       <Label className="text-[13px] font-medium text-[#525252] mb-1.5 block">{label}{required && <span className="text-[#B91C1C] ml-0.5">*</span>}</Label>
       {type === "select" && options ? (
         <Select value={String(formData[name as keyof typeof formData] ?? "")} onValueChange={(v) => setFormData((p) => ({ ...p, [name]: v }))}>
-          <SelectTrigger className="h-[40px] border-[#E5E4E0] rounded-md text-[14px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
+          <SelectTrigger className="h-[40px] border-[#DDDDDD] rounded-md text-[14px]"><SelectValue placeholder={placeholder} /></SelectTrigger>
           <SelectContent>{options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
         </Select>
       ) : type === "textarea" ? (
-        <Textarea value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} placeholder={placeholder} className="border-[#E5E4E0] rounded-md text-[14px] min-h-[80px]" />
+        <Textarea value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} placeholder={placeholder} className="border-[#DDDDDD] rounded-md text-[14px] min-h-[80px]" />
       ) : type === "date" ? (
-        <Input type="date" value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} className="h-[40px] border-[#E5E4E0] rounded-md text-[14px]" />
+        <Input type="date" value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} className="h-[40px] border-[#DDDDDD] rounded-md text-[14px]" />
       ) : (
-        <Input type={type} value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} placeholder={placeholder} className={cn("h-[40px] border-[#E5E4E0] rounded-md text-[14px]", formErrors[name] && "border-[#B91C1C] ring-1 ring-[rgba(185,28,28,0.15)]")} />
+        <Input type={type} value={String(formData[name as keyof typeof formData] ?? "")} onChange={(e) => setFormData((p) => ({ ...p, [name]: e.target.value }))} placeholder={placeholder} className={cn("h-[40px] border-[#DDDDDD] rounded-md text-[14px]", formErrors[name] && "border-[#B91C1C] ring-1 ring-[rgba(185,28,28,0.15)]")} />
       )}
       {formErrors[name] && <p className="text-[12px] text-[#B91C1C] mt-1">{formErrors[name]}</p>}
     </div>
@@ -288,10 +288,10 @@ export default function Employees() {
   const EmployeeForm = ({ isEdit = false }: { isEdit?: boolean }) => (
     <div>
       <Tabs value={formTab} onValueChange={setFormTab}>
-        <TabsList className="mb-4 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg">
-          <TabsTrigger value="personal" className="text-[13px] data-[state=active]:text-[#D4A017] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A017] rounded-none">Personal</TabsTrigger>
-          <TabsTrigger value="employment" className="text-[13px] data-[state=active]:text-[#D4A017] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A017] rounded-none">Employment</TabsTrigger>
-          <TabsTrigger value="contact" className="text-[13px] data-[state=active]:text-[#D4A017] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A017] rounded-none">Contact</TabsTrigger>
+        <TabsList className="mb-4 bg-[#FAFAFA] border border-[#DDDDDD] rounded-lg">
+          <TabsTrigger value="personal" className="text-[13px] data-[state=active]:text-[#8C7600] data-[state=active]:border-b-2 data-[state=active]:border-[#EDC817] rounded-none">Personal</TabsTrigger>
+          <TabsTrigger value="employment" className="text-[13px] data-[state=active]:text-[#8C7600] data-[state=active]:border-b-2 data-[state=active]:border-[#EDC817] rounded-none">Employment</TabsTrigger>
+          <TabsTrigger value="contact" className="text-[13px] data-[state=active]:text-[#8C7600] data-[state=active]:border-b-2 data-[state=active]:border-[#EDC817] rounded-none">Contact</TabsTrigger>
         </TabsList>
         <TabsContent value="personal" className="mt-0">
           <div className="grid grid-cols-2 gap-x-6">
@@ -306,7 +306,7 @@ export default function Employees() {
             <div>
               <FormField label="Photo URL" name="photoUrl" placeholder="https://..." />
               {FormField({ label: "Home Address", name: "homeAddress", type: "textarea", placeholder: "Full residential address" })}
-              <div className="border-t border-[#E5E4E0] pt-3 mt-2">
+              <div className="border-t border-[#DDDDDD] pt-3 mt-2">
                 <p className="text-[13px] font-semibold text-[#525252] mb-2">Emergency Contact</p>
                 {FormField({ label: "Contact Name", name: "emergencyContactName" })}
                 {FormField({ label: "Relationship", name: "emergencyContactRelationship" })}
@@ -359,30 +359,30 @@ export default function Employees() {
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Employee Master Data</h1>
+          <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Employee Master Data</h1>
           <p className="text-[13px] text-[#525252] mt-1">Manage and view all employee records</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="h-[40px] border-[#E5E4E0] text-[#525252] hover:border-[#D4A017] hover:text-[#D4A017]" onClick={handleExportCSV}>
+          <Button variant="outline" className="h-[40px] border-[#DDDDDD] text-[#525252] hover:border-[#EDC817] hover:text-[#8C7600]" onClick={handleExportCSV}>
             <Download className="w-4 h-4 mr-1.5" /> Export CSV
           </Button>
-          <Button className="h-[40px] bg-[#D4A017] hover:bg-[#A67C0A] text-white font-semibold shadow-[0_4px_12px_rgba(212,160,23,0.25)]" onClick={openNewModal}>
+          <Button className="h-[40px] bg-[#EDC817] hover:bg-[#D9B60F] text-black font-semibold shadow-[0_4px_12px_rgba(237, 200, 23,0.25)]" onClick={openNewModal}>
             <Plus className="w-4 h-4 mr-1.5" /> New Employee
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load employees: {error}</div>
+        <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load employees: {error}</div>
       )}
       {actionError && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+        <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} className="ml-3 hover:text-[#991B1B]"><X className="w-4 h-4" /></button>
         </div>
       )}
       {/* ── Filter Bar ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-4">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C9C9C]" />
@@ -390,23 +390,23 @@ export default function Employees() {
               placeholder="Search by name, code, email, phone..."
               value={filters.search}
               onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
-              className="pl-9 h-[36px] border-[#E5E4E0] text-[14px]"
+              className="pl-9 h-[36px] border-[#DDDDDD] text-[14px]"
             />
           </div>
           <Select value={filters.siteIds.length === 1 ? String(filters.siteIds[0]) : filters.siteIds.length > 1 ? "multiple" : "all"} onValueChange={(v) => setFilters((p) => ({ ...p, siteIds: v === "all" || v === "multiple" ? [] : [v] }))}>
-            <SelectTrigger className="h-[36px] min-w-[160px] border-[#E5E4E0] text-[14px]"><SelectValue placeholder="All Sites" /></SelectTrigger>
+            <SelectTrigger className="h-[36px] min-w-[160px] border-[#DDDDDD] text-[14px]"><SelectValue placeholder="All Sites" /></SelectTrigger>
             <SelectContent>{sites.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.fullName}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={filters.departments.length === 1 ? filters.departments[0] : filters.departments.length > 1 ? "multiple" : "all"} onValueChange={(v) => setFilters((p) => ({ ...p, departments: v === "all" || v === "multiple" ? [] : [v] }))}>
-            <SelectTrigger className="h-[36px] min-w-[160px] border-[#E5E4E0] text-[14px]"><SelectValue placeholder="All Departments" /></SelectTrigger>
+            <SelectTrigger className="h-[36px] min-w-[160px] border-[#DDDDDD] text-[14px]"><SelectValue placeholder="All Departments" /></SelectTrigger>
             <SelectContent>{DEPARTMENTS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={filters.statuses.length === 1 ? filters.statuses[0] : filters.statuses.length > 1 ? "multiple" : "all"} onValueChange={(v) => setFilters((p) => ({ ...p, statuses: v === "all" || v === "multiple" ? [] : [v as EmployeeStatus] }))}>
-            <SelectTrigger className="h-[36px] min-w-[160px] border-[#E5E4E0] text-[14px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="h-[36px] min-w-[160px] border-[#DDDDDD] text-[14px]"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={filters.gender} onValueChange={(v) => setFilters((p) => ({ ...p, gender: v }))}>
-            <SelectTrigger className="h-[36px] min-w-[120px] border-[#E5E4E0] text-[14px]"><SelectValue placeholder="Gender" /></SelectTrigger>
+            <SelectTrigger className="h-[36px] min-w-[120px] border-[#DDDDDD] text-[14px]"><SelectValue placeholder="Gender" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Genders</SelectItem>
               <SelectItem value="Male">Male</SelectItem>
@@ -417,15 +417,15 @@ export default function Employees() {
 
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
-              <button onClick={() => setColDropdownOpen(!colDropdownOpen)} className="h-[36px] px-3 border border-[#E5E4E0] rounded-md text-[14px] text-[#525252] hover:border-[#D4A017] transition-colors flex items-center gap-1.5">
+              <button onClick={() => setColDropdownOpen(!colDropdownOpen)} className="h-[36px] px-3 border border-[#DDDDDD] rounded-md text-[14px] text-[#525252] hover:border-[#EDC817] transition-colors flex items-center gap-1.5">
                 <Columns3 className="w-4 h-4" /> Columns
               </button>
               {colDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1 w-[180px] bg-white border border-[#E5E4E0] rounded-lg shadow-dropdown z-20 py-1">
+                <div className="absolute right-0 top-full mt-1 w-[180px] bg-white border border-[#DDDDDD] rounded-lg shadow-dropdown z-20 py-1">
                   {Object.keys(DEFAULT_VISIBLE_COLS).map((col) => (
-                    <button key={col} onClick={() => { setVisibleCols((p) => ({ ...p, [col]: !p[col] })); }} className="w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#FAFAF8] transition-colors text-left">
-                      <div className={cn("w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center transition-colors", visibleCols[col] ? "bg-[#D4A017] border-[#D4A017]" : "border-[#C4C3BF]")}>
-                        {visibleCols[col] && <Check className="w-3 h-3 text-white" />}
+                    <button key={col} onClick={() => { setVisibleCols((p) => ({ ...p, [col]: !p[col] })); }} className="w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#FAFAFA] transition-colors text-left">
+                      <div className={cn("w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center transition-colors", visibleCols[col] ? "bg-[#EDC817] border-[#EDC817]" : "border-[#C4C4C4]")}>
+                        {visibleCols[col] && <Check className="w-3 h-3 text-black" />}
                       </div>
                       <span className="capitalize">{col === "fullName" ? "Full Name" : col === "code" ? "Code" : col}</span>
                     </button>
@@ -438,19 +438,19 @@ export default function Employees() {
 
         {/* Active filter pills */}
         {activeFilterCount > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-[#E5E4E0]">
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-[#DDDDDD]">
             {filters.siteIds.length > 0 && <FilterPill label={`Site: ${sites.find((s) => s.id === filters.siteIds[0])?.name}${filters.siteIds.length > 1 ? ` +${filters.siteIds.length - 1}` : ""}`} onRemove={() => setFilters((p) => ({ ...p, siteIds: [] }))} />}
             {filters.departments.length > 0 && <FilterPill label={`Dept: ${filters.departments[0]}${filters.departments.length > 1 ? ` +${filters.departments.length - 1}` : ""}`} onRemove={() => setFilters((p) => ({ ...p, departments: [] }))} />}
             {filters.statuses.length > 0 && !(filters.statuses.length === 1 && filters.statuses[0] === "Active") && <FilterPill label={`Status: ${filters.statuses[0]}${filters.statuses.length > 1 ? ` +${filters.statuses.length - 1}` : ""}`} onRemove={() => setFilters((p) => ({ ...p, statuses: ["Active"] }))} />}
             {filters.gender !== "All" && <FilterPill label={`Gender: ${filters.gender}`} onRemove={() => setFilters((p) => ({ ...p, gender: "All" }))} />}
-            <button onClick={clearFilters} className="text-[12px] text-[#D4A017] hover:underline ml-1">Clear all filters</button>
+            <button onClick={clearFilters} className="text-[12px] text-[#8C7600] hover:underline ml-1">Clear all filters</button>
           </div>
         )}
       </div>
 
       {/* ── Bulk Actions Bar ─────────────────────────────────────────────── */}
       {selectedIds.size > 0 && (
-        <div className="h-[40px] bg-[#D4A017] rounded-lg flex items-center px-4 gap-3 text-white">
+        <div className="h-[40px] bg-[#EDC817] rounded-lg flex items-center px-4 gap-3 text-black">
           <span className="text-[13px] font-semibold">{selectedIds.size} employee{selectedIds.size > 1 ? "s" : ""} selected</span>
           <div className="w-px h-5 bg-white/30" />
           <button onClick={handleExportCSV} className="text-[13px] font-medium hover:underline flex items-center gap-1"><Download className="w-3.5 h-3.5" /> Export</button>
@@ -459,11 +459,11 @@ export default function Employees() {
       )}
 
       {/* ── Data Table ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#FAFAF8] sticky top-0 z-10">
-              <tr className="border-b border-[#E5E4E0]">
+            <thead className="bg-[#FAFAFA] sticky top-0 z-10">
+              <tr className="border-b border-[#DDDDDD]">
                 <th className="w-[40px] px-4 py-3"><Checkbox checked={paginatedEmployees.length > 0 && selectedIds.size === paginatedEmployees.length} onCheckedChange={toggleSelectAll} aria-label="Select all" /></th>
                 {visibleCols.code && <th className="px-4 py-3 text-left"><button onClick={() => handleSort("code")} className="group flex items-center gap-1 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Code <SortIcon field="code" currentField={sortField} dir={sortDir} /></button></th>}
                 {visibleCols.photo && <th className="w-[56px] px-2 py-3 text-left text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Photo</th>}
@@ -485,17 +485,17 @@ export default function Employees() {
                   <tr
                     key={emp.id}
                     className={cn(
-                      "border-b border-[#E5E4E0] h-[56px] cursor-pointer transition-colors duration-100",
-                      isSelected ? "bg-[rgba(212,160,23,0.06)] border-l-[3px] border-l-[#D4A017]" : "hover:bg-[#FAFAF8]"
+                      "border-b border-[#DDDDDD] h-[56px] cursor-pointer transition-colors duration-100",
+                      isSelected ? "bg-[rgba(237, 200, 23,0.06)] border-l-[3px] border-l-[#EDC817]" : "hover:bg-[#FAFAFA]"
                     )}
                     onClick={() => navigate(`/employees/${emp.id}`)}
                   >
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <Checkbox checked={isSelected} onCheckedChange={() => toggleSelectRow(emp.id)} aria-label={`Select ${emp.firstName}`} />
                     </td>
-                    {visibleCols.code && <td className="px-4 py-3 text-[13px] text-[#1A1A1A] font-medium whitespace-nowrap">{emp.code || "—"}</td>}
+                    {visibleCols.code && <td className="px-4 py-3 text-[13px] text-[#000000] font-medium whitespace-nowrap">{emp.code || "—"}</td>}
                     {visibleCols.photo && <td className="px-2 py-3"><EmpAvatar emp={emp} size={32} /></td>}
-                    {visibleCols.fullName && <td className="px-4 py-3 text-[13px] text-[#1A1A1A] font-medium hover:text-[#D4A017] hover:underline transition-colors">{emp.firstName} {emp.lastName}</td>}
+                    {visibleCols.fullName && <td className="px-4 py-3 text-[13px] text-[#000000] font-medium hover:text-[#8C7600] hover:underline transition-colors">{emp.firstName} {emp.lastName}</td>}
                     {visibleCols.site && <td className="px-4 py-3 text-[13px] text-[#525252]">{getSiteName(emp.siteId)}</td>}
                     {visibleCols.department && <td className="px-4 py-3 text-[13px] text-[#525252]">{emp.department}</td>}
                     {visibleCols.position && <td className="px-4 py-3 text-[13px] text-[#525252] max-w-[150px] truncate">{emp.position || emp.jobTitle}</td>}
@@ -506,9 +506,9 @@ export default function Employees() {
                     {visibleCols.actions && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#D4A017] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                          <button onClick={() => openEditModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#1E6BA3] transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => openDeleteModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAF8] text-[#525252] hover:text-[#B91C1C] transition-colors" title="Archive"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-md hover:bg-[#FAFAFA] text-[#525252] hover:text-[#8C7600] transition-colors" title="View"><Eye className="w-4 h-4" /></button>
+                          <button onClick={() => openEditModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAFA] text-[#525252] hover:text-[#1E6BA3] transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => openDeleteModal(emp)} className="p-1.5 rounded-md hover:bg-[#FAFAFA] text-[#525252] hover:text-[#B91C1C] transition-colors" title="Archive"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </td>
                     )}
@@ -518,7 +518,7 @@ export default function Employees() {
               {loading && (
                 <tr><td colSpan={11} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
                     <p className="text-[13px] text-[#9C9C9C]">Loading employees...</p>
                   </div>
                 </td></tr>
@@ -527,7 +527,7 @@ export default function Employees() {
                 <tr><td colSpan={11} className="py-16 text-center text-[#9C9C9C]">
                   <div className="flex flex-col items-center gap-2">
                     <Search className="w-10 h-10 opacity-40" />
-                    <p className="text-[16px] font-semibold text-[#1A1A1A]">No records found</p>
+                    <p className="text-[16px] font-semibold text-[#000000]">No records found</p>
                     <p className="text-[13px] text-[#525252]">Try adjusting your filters</p>
                   </div>
                 </td></tr>
@@ -537,24 +537,24 @@ export default function Employees() {
         </div>
 
         {/* ── Pagination ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[#E5E4E0] bg-white">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-[#DDDDDD] bg-white">
           <span className="text-[13px] text-[#525252]">Showing {Math.min((page - 1) * pageSize + 1, filteredEmployees.length)}-{Math.min(page * pageSize, filteredEmployees.length)} of {filteredEmployees.length} results</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded-md border border-[#E5E4E0] text-[#525252] hover:border-[#D4A017] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronDown className="w-4 h-4 rotate-90" /></button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded-md border border-[#DDDDDD] text-[#525252] hover:border-[#EDC817] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronDown className="w-4 h-4 rotate-90" /></button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let p = i + 1;
               if (totalPages > 5 && page > 3) p = page - 3 + i;
               if (p > totalPages) return null;
               return (
-                <button key={p} onClick={() => setPage(p)} className={cn("w-8 h-8 rounded-md text-[13px] font-medium transition-colors", p === page ? "bg-[#D4A017] text-white" : "text-[#525252] hover:bg-[#FAFAF8]")}>{p}</button>
+                <button key={p} onClick={() => setPage(p)} className={cn("w-8 h-8 rounded-md text-[13px] font-medium transition-colors", p === page ? "bg-[#EDC817] text-black" : "text-[#525252] hover:bg-[#FAFAFA]")}>{p}</button>
               );
             })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-1.5 rounded-md border border-[#E5E4E0] text-[#525252] hover:border-[#D4A017] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronDown className="w-4 h-4 -rotate-90" /></button>
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-1.5 rounded-md border border-[#DDDDDD] text-[#525252] hover:border-[#EDC817] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"><ChevronDown className="w-4 h-4 -rotate-90" /></button>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[13px] text-[#525252]">Per page:</span>
             <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
-              <SelectTrigger className="h-[32px] w-[70px] border-[#E5E4E0] text-[13px]"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-[32px] w-[70px] border-[#DDDDDD] text-[13px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="10">10</SelectItem>
                 <SelectItem value="25">25</SelectItem>
@@ -573,7 +573,7 @@ export default function Employees() {
           {EmployeeForm({})}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveNew}>{saving ? "Creating..." : "Create Employee"}</Button>
+            <Button className="bg-[#EDC817] hover:bg-[#D9B60F] text-black" disabled={saving} onClick={handleSaveNew}>{saving ? "Creating..." : "Create Employee"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -585,7 +585,7 @@ export default function Employees() {
           {EmployeeForm({ isEdit: true })}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button className="bg-[#D4A017] hover:bg-[#A67C0A] text-white" disabled={saving} onClick={handleSaveEdit}>{saving ? "Saving..." : "Save Changes"}</Button>
+            <Button className="bg-[#EDC817] hover:bg-[#D9B60F] text-black" disabled={saving} onClick={handleSaveEdit}>{saving ? "Saving..." : "Save Changes"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

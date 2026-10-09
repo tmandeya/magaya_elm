@@ -14,7 +14,7 @@ export const roleRingColors: Record<string, string> = {
   security: "ring-[#1E6BA3]",
   admin: "ring-[#166534]",
   hod: "ring-[#C27A06]",
-  gm: "ring-[#1A1A1A]",
+  gm: "ring-[#000000]",
 };
 
 export const personnelRoles = [

@@ -69,7 +69,7 @@ export function WizardStepper({ steps, currentStep }: WizardStepperProps) {
               <div
                 className={cn(
                   "absolute top-[14px] left-0 right-0 h-[2px] -translate-x-1/2",
-                  index <= currentStep ? "bg-[#1B7A43]" : "bg-[#E5E4E0]"
+                  index <= currentStep ? "bg-[#1B7A43]" : "bg-[#DDDDDD]"
                 )}
                 style={{ width: "100%" }}
               />
@@ -80,8 +80,8 @@ export function WizardStepper({ steps, currentStep }: WizardStepperProps) {
               className={cn(
                 "relative z-10 w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold border-2 transition-all duration-200",
                 isCompleted && "bg-[#1B7A43] border-[#1B7A43] text-white",
-                isCurrent && "bg-[#D4A017] border-[#D4A017] text-white",
-                isUpcoming && "bg-white border-[#E5E4E0] text-[#9C9C9C]"
+                isCurrent && "bg-[#EDC817] border-[#EDC817] text-black",
+                isUpcoming && "bg-white border-[#DDDDDD] text-[#9C9C9C]"
               )}
             >
               {isCompleted ? <Check className="w-3.5 h-3.5" /> : index + 1}
@@ -91,7 +91,7 @@ export function WizardStepper({ steps, currentStep }: WizardStepperProps) {
             <span
               className={cn(
                 "mt-2 text-[11px] font-medium text-center leading-tight max-w-[80px]",
-                isCompleted || isCurrent ? "text-[#1A1A1A]" : "text-[#9C9C9C]"
+                isCompleted || isCurrent ? "text-[#000000]" : "text-[#9C9C9C]"
               )}
             >
               {label}
@@ -134,7 +134,7 @@ export function WorkflowProgressBar({
       : (completedCount / stages.length) * 100;
 
   const accent = {
-    gold: { fill: "bg-[#D4A017]", pulse: "ring-[#D4A017]" },
+    gold: { fill: "bg-[#EDC817]", pulse: "ring-[#EDC817]" },
     danger: { fill: "bg-[#B91C1C]", pulse: "ring-[#B91C1C]" },
     info: { fill: "bg-[#1E6BA3]", pulse: "ring-[#1E6BA3]" },
   }[accentColor];
@@ -156,7 +156,7 @@ export function WorkflowProgressBar({
       )}
       <div className="flex items-start justify-between relative">
         {/* Background track */}
-        <div className="absolute top-[5px] left-0 right-0 h-[2px] bg-[#E5E4E0] rounded" />
+        <div className="absolute top-[5px] left-0 right-0 h-[2px] bg-[#DDDDDD] rounded" />
         <div
           className={cn("absolute top-[5px] left-0 h-[2px] rounded transition-all duration-500", accent.fill)}
           style={{ width: `${Math.min(progressPercent, 100)}%` }}
@@ -184,11 +184,11 @@ export function WorkflowProgressBar({
                 className={cn(
                   "w-3 h-3 rounded-full border-2 transition-all duration-200",
                   isCompleted && "bg-[#1B7A43] border-[#1B7A43]",
-                  isInProgress && cn("bg-[#D4A017] border-[#D4A017]", accentColor === "danger" && "bg-[#B91C1C] border-[#B91C1C]", accentColor === "info" && "bg-[#1E6BA3] border-[#1E6BA3]"),
-                  isPending && "bg-white border-[#E5E4E0]",
+                  isInProgress && cn("bg-[#EDC817] border-[#EDC817]", accentColor === "danger" && "bg-[#B91C1C] border-[#B91C1C]", accentColor === "info" && "bg-[#1E6BA3] border-[#1E6BA3]"),
+                  isPending && "bg-white border-[#DDDDDD]",
                   isInProgress && "ring-2 ring-offset-1 animate-pulse",
                   isInProgress && accent.pulse,
-                  isSelected && "ring-2 ring-offset-2 ring-[#D4A017]"
+                  isSelected && "ring-2 ring-offset-2 ring-[#EDC817]"
                 )}
               />
 
@@ -205,7 +205,7 @@ export function WorkflowProgressBar({
               </span>
 
               {/* Detail */}
-              <span className="mt-0.5 text-[10px] text-[#737373] text-center max-w-[90px] leading-tight">
+              <span className="mt-0.5 text-[10px] text-[#6B6B6B] text-center max-w-[90px] leading-tight">
                 {stage.assignedTo}
               </span>
 
@@ -223,16 +223,16 @@ export function WorkflowProgressBar({
     const row1 = stages.slice(0, row1Count);
     const row2 = stages.slice(row1Count);
     return (
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
         <StageRow rowStages={row1} offset={0} showLabel="Clearance & Preparation" />
-        <div className="border-t border-[#E5E4E0] my-4" />
+        <div className="border-t border-[#DDDDDD] my-4" />
         <StageRow rowStages={row2} offset={row1Count} showLabel="Approvals" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
       <StageRow rowStages={stages} offset={0} />
     </div>
   );
@@ -258,16 +258,16 @@ export function WorkflowStageCard({
   const colors = statusColors[stage.status];
 
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-[#FAFAF8] transition-colors text-left"
+        className="w-full flex items-center justify-between p-4 hover:bg-[#FAFAFA] transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot, stage.status === "in-progress" && "ring-2 ring-offset-1 animate-pulse")} />
           <div>
-            <div className="text-[13px] font-semibold text-[#1A1A1A]">{stage.name}</div>
-            <div className="text-[11px] text-[#737373]">
+            <div className="text-[13px] font-semibold text-[#000000]">{stage.name}</div>
+            <div className="text-[11px] text-[#6B6B6B]">
               {stage.assignedTo}
               {stage.site && ` · ${stage.site}`}
             </div>
@@ -289,7 +289,7 @@ export function WorkflowStageCard({
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-4 border-t border-[#E5E4E0]">
+        <div className="px-4 pb-4 border-t border-[#DDDDDD]">
           {/* Completed info */}
           {stage.status === "completed" && stage.completedBy && (
             <div className="mt-3 p-3 bg-[#E8F5EC] rounded-lg">
@@ -299,7 +299,7 @@ export function WorkflowStageCard({
                   Completed by {stage.completedBy}
                 </span>
                 {stage.completedDate && (
-                  <span className="text-[#737373]">on {stage.completedDate}</span>
+                  <span className="text-[#6B6B6B]">on {stage.completedDate}</span>
                 )}
               </div>
               {stage.notes && (
@@ -327,8 +327,8 @@ export function WorkflowStageCard({
                     className={cn(
                       "text-[12px] transition-colors",
                       task.completed
-                        ? "text-[#737373] line-through"
-                        : "text-[#1A1A1A] group-hover:text-[#525252]"
+                        ? "text-[#6B6B6B] line-through"
+                        : "text-[#000000] group-hover:text-[#525252]"
                     )}
                   >
                     {task.label}
@@ -361,8 +361,8 @@ export function SignOffForm({ onSignOff, onCancel, stageName, canSignOff = true 
   if (!canSignOff) return null;
 
   return (
-    <div className="mt-4 p-4 bg-[#FAFAF8] rounded-lg border border-[#E5E4E0]">
-      <div className="text-[13px] font-semibold text-[#1A1A1A] mb-3">
+    <div className="mt-4 p-4 bg-[#FAFAFA] rounded-lg border border-[#DDDDDD]">
+      <div className="text-[13px] font-semibold text-[#000000] mb-3">
         Sign Off {stageName}
       </div>
 
@@ -383,7 +383,7 @@ export function SignOffForm({ onSignOff, onCancel, stageName, canSignOff = true 
       <div className="flex items-center gap-2">
         <Button
           size="sm"
-          className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[12px]"
+          className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px]"
           disabled={!confirmed}
           onClick={() => {
             onSignOff(notes);

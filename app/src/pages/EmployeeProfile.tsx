@@ -15,15 +15,15 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9C9C9C]">{label}</div>
-      <div className="text-[14px] text-[#1A1A1A] mt-0.5 break-words">{value ?? <span className="text-[#C4C3BF]">—</span>}</div>
+      <div className="text-[14px] text-[#000000] mt-0.5 break-words">{value ?? <span className="text-[#C4C4C4]">—</span>}</div>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
-      <h3 className="text-[15px] font-semibold text-[#1A1A1A] mb-4">{title}</h3>
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6">
+      <h3 className="text-[15px] font-semibold text-[#000000] mb-4">{title}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">{children}</div>
     </div>
   );
@@ -34,7 +34,7 @@ const fmtBytes = (n?: number | null) => (n == null ? "" : n > 1048576 ? `${(n / 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-[#E8F5EC] text-[#1B7A43]", onboarding: "bg-[#FDF3E0] text-[#C27A06]",
   offboarding: "bg-[#FEF2F2] text-[#B91C1C]", transferred: "bg-[#E8F2FA] text-[#1E6BA3]",
-  terminated: "bg-[#F5F5F5] text-[#737373]", archived: "bg-[#F5F5F5] text-[#737373]",
+  terminated: "bg-[#F5F5F5] text-[#6B6B6B]", archived: "bg-[#F5F5F5] text-[#6B6B6B]",
 };
 
 const TABS = ["Personal", "Employment", "Contact & Emergency", "Qualifications", "Payroll & Banking", "Documents"] as const;
@@ -65,7 +65,7 @@ export default function EmployeeProfile() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
         <p className="text-[13px] text-[#9C9C9C]">Loading employee profile...</p>
       </div>
     );
@@ -73,8 +73,8 @@ export default function EmployeeProfile() {
   if (notFound || !e) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <UserIcon className="w-10 h-10 text-[#C4C3BF]" />
-        <p className="text-[16px] font-semibold text-[#1A1A1A]">Employee Not Found</p>
+        <UserIcon className="w-10 h-10 text-[#C4C4C4]" />
+        <p className="text-[16px] font-semibold text-[#000000]">Employee Not Found</p>
         <Button variant="outline" onClick={() => navigate("/employees")}>Back to Employees</Button>
       </div>
     );
@@ -92,30 +92,30 @@ export default function EmployeeProfile() {
 
   return (
     <div className="space-y-5">
-      <button onClick={() => navigate("/employees")} className="flex items-center gap-1 text-[13px] text-[#525252] hover:text-[#1A1A1A] transition-colors">
+      <button onClick={() => navigate("/employees")} className="flex items-center gap-1 text-[13px] text-[#525252] hover:text-[#000000] transition-colors">
         <ChevronLeft className="w-4 h-4" /> Back to Employee Master Data
       </button>
 
-      {error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
+      {error && <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{error}</div>}
       {actionError && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+        <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} className="text-[12px] font-medium hover:text-[#991B1B]">Dismiss</button>
         </div>
       )}
 
       {/* Header card */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6 flex items-start gap-6 flex-wrap">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6 flex items-start gap-6 flex-wrap">
         <div className="relative group">
           {photoUrl ? (
-            <img src={photoUrl} alt={e.full_name} className="w-[96px] h-[96px] rounded-full object-cover border-2 border-[#E5E4E0]" />
+            <img src={photoUrl} alt={e.full_name} className="w-[96px] h-[96px] rounded-full object-cover border-2 border-[#DDDDDD]" />
           ) : (
-            <div className="w-[96px] h-[96px] rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[28px] font-semibold">
+            <div className="w-[96px] h-[96px] rounded-full bg-[#EDC817] flex items-center justify-center text-black text-[28px] font-semibold">
               {(e.initials || `${e.first_name?.[0] ?? ""}${e.surname?.[0] ?? ""}`).slice(0, 2).toUpperCase()}
             </div>
           )}
           <button onClick={() => photoRef.current?.click()} disabled={busy}
-            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center border-2 border-white hover:bg-[#333] transition-colors" title="Upload photo">
+            className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#000000] text-white flex items-center justify-center border-2 border-white hover:bg-[#333] transition-colors" title="Upload photo">
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
           </button>
           <input ref={photoRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
@@ -123,28 +123,28 @@ export default function EmployeeProfile() {
         </div>
         <div className="flex-1 min-w-[260px]">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-[24px] font-bold text-[#1A1A1A] tracking-[-0.02em]">{e.full_name}</h1>
-            <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize", STATUS_STYLE[e.status] ?? "bg-[#F5F5F5] text-[#737373]")}>{e.status}</span>
+            <h1 className="text-[24px] font-bold text-[#000000] tracking-[-0.02em]">{e.full_name}</h1>
+            <span className={cn("px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize", STATUS_STYLE[e.status] ?? "bg-[#F5F5F5] text-[#6B6B6B]")}>{e.status}</span>
           </div>
           <p className="text-[14px] text-[#525252] mt-1">
             {e.job_titles?.title ?? e.job_title_custom ?? e.position ?? "—"} · {e.departments?.name ?? "—"} · {e.sites?.name ?? "—"}
           </p>
-          <div className="flex items-center gap-4 mt-3 text-[12px] text-[#737373] flex-wrap">
-            <span>Employee ID: <strong className="text-[#1A1A1A]">{e.employee_id}</strong></span>
-            {e.internal_id && <span>Internal ID: <strong className="text-[#1A1A1A]">{e.internal_id}</strong></span>}
-            {e.job_grade && <span>Grade: <strong className="text-[#1A1A1A]">{e.job_grade}</strong></span>}
-            {e.nec_grade && <span>NEC: <strong className="text-[#1A1A1A]">{e.nec_grade}</strong></span>}
-            <span>Engaged: <strong className="text-[#1A1A1A]">{fmtDate(e.date_of_engagement) ?? "—"}</strong></span>
+          <div className="flex items-center gap-4 mt-3 text-[12px] text-[#6B6B6B] flex-wrap">
+            <span>Employee ID: <strong className="text-[#000000]">{e.employee_id}</strong></span>
+            {e.internal_id && <span>Internal ID: <strong className="text-[#000000]">{e.internal_id}</strong></span>}
+            {e.job_grade && <span>Grade: <strong className="text-[#000000]">{e.job_grade}</strong></span>}
+            {e.nec_grade && <span>NEC: <strong className="text-[#000000]">{e.nec_grade}</strong></span>}
+            <span>Engaged: <strong className="text-[#000000]">{fmtDate(e.date_of_engagement) ?? "—"}</strong></span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-[#E5E4E0] overflow-x-auto">
+      <div className="flex items-center gap-1 border-b border-[#DDDDDD] overflow-x-auto">
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={cn("px-4 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors",
-              tab === t ? "border-[#D4A017] text-[#1A1A1A]" : "border-transparent text-[#737373] hover:text-[#1A1A1A]")}>
+              tab === t ? "border-[#EDC817] text-[#000000]" : "border-transparent text-[#6B6B6B] hover:text-[#000000]")}>
             {t}{t === "Documents" ? ` (${documents.length})` : ""}{t === "Payroll & Banking" && financialsRestricted ? " 🔒" : ""}
           </button>
         ))}
@@ -217,10 +217,10 @@ export default function EmployeeProfile() {
 
       {tab === "Payroll & Banking" && (
         financialsRestricted || (!financials && !isHr) ? (
-          <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-10 flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-[#FAFAF8] border border-[#E5E4E0] flex items-center justify-center"><Lock className="w-5 h-5 text-[#9C9C9C]" /></div>
-            <p className="text-[15px] font-semibold text-[#1A1A1A]">Restricted to Human Resources</p>
-            <p className="text-[13px] text-[#737373] max-w-[420px]">Payroll and banking details are visible to HR roles only. This restriction is enforced by the database, not just hidden in the interface.</p>
+          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-10 flex flex-col items-center text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#FAFAFA] border border-[#DDDDDD] flex items-center justify-center"><Lock className="w-5 h-5 text-[#9C9C9C]" /></div>
+            <p className="text-[15px] font-semibold text-[#000000]">Restricted to Human Resources</p>
+            <p className="text-[13px] text-[#6B6B6B] max-w-[420px]">Payroll and banking details are visible to HR roles only. This restriction is enforced by the database, not just hidden in the interface.</p>
           </div>
         ) : financials ? (
           <div className="space-y-5">
@@ -246,14 +246,14 @@ export default function EmployeeProfile() {
             </Section>
           </div>
         ) : (
-          <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-10 text-center text-[13px] text-[#737373]">No payroll record for this employee yet.</div>
+          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-10 text-center text-[13px] text-[#6B6B6B]">No payroll record for this employee yet.</div>
         )
       )}
 
       {tab === "Documents" && (
         <div className="space-y-5">
-          <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
-            <h3 className="text-[15px] font-semibold text-[#1A1A1A] mb-4">Attach a Document</h3>
+          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6">
+            <h3 className="text-[15px] font-semibold text-[#000000] mb-4">Attach a Document</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
                 <label className="block text-[12px] font-medium text-[#525252] mb-1.5">Document Type *</label>
@@ -276,7 +276,7 @@ export default function EmployeeProfile() {
                 <Button variant="outline" onClick={() => docRef.current?.click()} className="h-[40px] flex-1 text-[13px]">
                   <Upload className="w-4 h-4 mr-1.5" /> {pendingFile ? pendingFile.name.slice(0, 18) + (pendingFile.name.length > 18 ? "…" : "") : "Choose file"}
                 </Button>
-                <Button onClick={() => void handleDocUpload()} disabled={!pendingFile || !docType || busy} className="h-[40px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">
+                <Button onClick={() => void handleDocUpload()} disabled={!pendingFile || !docType || busy} className="h-[40px] bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Attach"}
                 </Button>
               </div>
@@ -286,22 +286,22 @@ export default function EmployeeProfile() {
             <p className="text-[11px] text-[#9C9C9C] mt-3">PDF, images, or Word documents up to 10 MB. Every upload must be named with a document type.</p>
           </div>
 
-          <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+          <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
             {documents.length === 0 ? (
               <div className="py-14 text-center">
-                <FileText className="w-8 h-8 text-[#C4C3BF] mx-auto mb-2" />
+                <FileText className="w-8 h-8 text-[#C4C4C4] mx-auto mb-2" />
                 <p className="text-[13px] text-[#9C9C9C]">No documents attached yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-[#E5E4E0]">
+              <div className="divide-y divide-[#DDDDDD]">
                 {documents.map((d: ProfileDocument) => (
                   <div key={d.id} className="flex items-center gap-4 px-5 py-3.5">
-                    <div className="w-9 h-9 rounded-lg bg-[#FAFAF8] border border-[#E5E4E0] flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-[#D4A017]" />
+                    <div className="w-9 h-9 rounded-lg bg-[#FAFAFA] border border-[#DDDDDD] flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-[#8C7600]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[13px] font-medium text-[#1A1A1A]">{DOCUMENT_TYPE_LABEL[d.category] ?? d.category}</span>
+                        <span className="text-[13px] font-medium text-[#000000]">{DOCUMENT_TYPE_LABEL[d.category] ?? d.category}</span>
                         {d.expiryDate && new Date(d.expiryDate) < new Date() && <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FEF2F2] text-[#B91C1C]">EXPIRED</span>}
                       </div>
                       <div className="text-[12px] text-[#9C9C9C] truncate">{d.fileName} · {fmtBytes(d.fileSize)}{d.description ? ` · ${d.description}` : ""}{d.expiryDate ? ` · expires ${fmtDate(d.expiryDate)}` : ""}</div>

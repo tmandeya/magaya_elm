@@ -5,17 +5,17 @@
 @layer base {
   :root {
     /* Magaya Mining Brand Colors */
-    --color-black: #1A1A1A;
-    --color-gold: #D4A017;
+    --color-black: #000000;
+    --color-gold: #EDC817;
     --color-gold-light: #E8C44A;
-    --color-gold-dark: #A67C0A;
+    --color-gold-dark: #D9B60F;
 
     /* Canvas Colors */
-    --color-canvas: #F4F3EF;
+    --color-canvas: #F9F9F9;
     --color-surface: #FFFFFF;
-    --color-surface-elevated: #FAFAF8;
-    --color-border: #E5E4E0;
-    --color-border-hover: #C4C3BF;
+    --color-surface-elevated: #FAFAFA;
+    --color-border: #DDDDDD;
+    --color-border-hover: #C4C4C4;
     --color-divider: #D9D8D4;
 
     /* Functional Colors */
@@ -29,10 +29,10 @@
     --color-info-bg: #E8F2FA;
 
     /* Text Colors */
-    --color-text-primary: #1A1A1A;
+    --color-text-primary: #000000;
     --color-text-secondary: #525252;
     --color-text-tertiary: #9C9C9C;
-    --color-muted: #737373;
+    --color-muted: #6B6B6B;
 
     /* Layout Dimensions */
     --sidebar-width: 260px;
@@ -70,8 +70,8 @@
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    --primary: 43 79% 46%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 50 86% 51%;
+    --primary-foreground: 0 0% 0%;
     --secondary: 40 11% 95%;
     --secondary-foreground: 0 0% 10%;
     --muted: 40 11% 95%;
@@ -82,14 +82,14 @@
     --destructive-foreground: 0 0% 100%;
     --border: 40 7% 89%;
     --input: 40 7% 89%;
-    --ring: 43 79% 46%;
+    --ring: 50 86% 51%;
     --radius: 0.5rem;
 
     /* Sidebar */
     --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 61%;
-    --sidebar-primary: 43 79% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 50 86% 51%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 43 79% 46%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 15%;

@@ -38,10 +38,10 @@ function LookupSection({ title, items, onAdd, onToggle, addFields, busy }: {
   const [showInactive, setShowInactive] = useState(false);
   const visible = items.filter((i) => showInactive || i.isActive);
   return (
-    <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
+    <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[14px] font-semibold text-[#1A1A1A]">{title} <span className="text-[#9C9C9C] font-normal">({items.filter((i) => i.isActive).length} active)</span></h3>
-        <label className="flex items-center gap-2 text-[12px] text-[#737373]"><Switch checked={showInactive} onCheckedChange={setShowInactive} /> Show inactive</label>
+        <h3 className="text-[14px] font-semibold text-[#000000]">{title} <span className="text-[#9C9C9C] font-normal">({items.filter((i) => i.isActive).length} active)</span></h3>
+        <label className="flex items-center gap-2 text-[12px] text-[#6B6B6B]"><Switch checked={showInactive} onCheckedChange={setShowInactive} /> Show inactive</label>
       </div>
       <div className="flex gap-2 mb-3 flex-wrap">
         {addFields.map((f) => f.select ? (
@@ -54,13 +54,13 @@ function LookupSection({ title, items, onAdd, onToggle, addFields, busy }: {
         ))}
         <Button size="sm" disabled={busy || !addFields.every((f) => f.select ? true : (values[f.key] ?? "").trim() || f.key.startsWith("_opt_"))}
           onClick={async () => { await onAdd(values); setValues({}); }}
-          className="h-[36px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
+          className="h-[36px] bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]"><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
       </div>
-      <div className="max-h-[260px] overflow-y-auto divide-y divide-[#F0EFEB] border-t border-[#F0EFEB]">
+      <div className="max-h-[260px] overflow-y-auto divide-y divide-[#EEEEEE] border-t border-[#EEEEEE]">
         {visible.map((i) => (
           <div key={i.id} className="flex items-center justify-between py-2">
             <div>
-              <span className={cn("text-[13px]", i.isActive ? "text-[#1A1A1A]" : "text-[#9C9C9C] line-through")}>{i.label}</span>
+              <span className={cn("text-[13px]", i.isActive ? "text-[#000000]" : "text-[#9C9C9C] line-through")}>{i.label}</span>
               {i.sub && <span className="text-[11px] text-[#9C9C9C] ml-2">{i.sub}</span>}
             </div>
             <Switch checked={i.isActive} disabled={busy} onCheckedChange={(v) => void onToggle(i.id, v)} />
@@ -118,7 +118,7 @@ export default function Settings() {
   if (s.loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
         <p className="text-[13px] text-[#9C9C9C]">Loading settings...</p>
       </div>
     );
@@ -127,24 +127,24 @@ export default function Settings() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">Settings</h1>
+        <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Settings</h1>
         <p className="text-[13px] text-[#525252] mt-1">System configuration and administrative preferences</p>
       </div>
 
-      {s.error && <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{s.error}</div>}
+      {s.error && <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{s.error}</div>}
       {notice && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-[13px] text-[#1B7A43] flex items-center justify-between">
+        <div className="px-4 py-3 rounded-[6px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 text-[13px] text-[#1B7A43] flex items-center justify-between">
           <span>{notice}</span>
           <button onClick={() => setNotice(null)} className="text-[12px] font-medium">Dismiss</button>
         </div>
       )}
 
       <div className="flex gap-5 items-start flex-col lg:flex-row">
-        <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-2 w-full lg:w-[220px] shrink-0">
+        <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-2 w-full lg:w-[220px] shrink-0">
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-left",
-                tab === t.key ? "bg-[#FDF6E3] text-[#A67C0A] border-l-2 border-[#D4A017]" : "text-[#525252] hover:bg-[#FAFAF8]")}>
+                tab === t.key ? "bg-[#FDF8DC] text-[#8C7600] border-l-2 border-[#EDC817]" : "text-[#525252] hover:bg-[#FAFAFA]")}>
               <t.icon className="w-4 h-4" /> {t.label}
             </button>
           ))}
@@ -152,41 +152,41 @@ export default function Settings() {
 
         <div className="flex-1 min-w-0 w-full space-y-4">
           {tab === "migration" && (
-            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6"><DataMigration /></div>
+            <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6"><DataMigration /></div>
           )}
 
           {tab === "users" && (
-            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
+            <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6">
               <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                  <h2 className="text-[18px] font-semibold text-[#1A1A1A]">User Management</h2>
+                  <h2 className="text-[18px] font-semibold text-[#000000]">User Management</h2>
                   <p className="text-[12px] text-[#525252]">Platform users, their roles and site scope. New users set their own password via "Forgot password".</p>
                 </div>
-                <Button onClick={openAdd} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"><Plus className="w-4 h-4 mr-1.5" /> Add User</Button>
+                <Button onClick={openAdd} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"><Plus className="w-4 h-4 mr-1.5" /> Add User</Button>
               </div>
               <div className="relative mb-4 max-w-[320px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C9C9C]" />
                 <Input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search users..." className="pl-9 h-[38px] text-[13px]" />
               </div>
-              <div className="border border-[#E5E4E0] rounded-[10px] overflow-x-auto">
+              <div className="border border-[#DDDDDD] rounded-[6px] overflow-x-auto">
                 <table className="w-full text-[13px]">
-                  <thead className="bg-[#FAFAF8]">
+                  <thead className="bg-[#FAFAFA]">
                     <tr>
                       {["User", "Role", "Site", "Status", "Last Login", "Actions"].map((h) => (
                         <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-[0.05em] text-[#525252]">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E4E0]">
+                  <tbody className="divide-y divide-[#DDDDDD]">
                     {filteredUsers.map((u) => (
                       <tr key={u.id}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-[#D4A017] text-white text-[12px] font-semibold flex items-center justify-center shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-[#EDC817] text-black text-[12px] font-semibold flex items-center justify-center shrink-0">
                               {u.fullName.split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-medium text-[#1A1A1A]">{u.fullName}</div>
+                              <div className="font-medium text-[#000000]">{u.fullName}</div>
                               <div className="text-[11px] text-[#9C9C9C]">{u.email}</div>
                             </div>
                           </div>
@@ -194,9 +194,9 @@ export default function Settings() {
                         <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-[#E8F2FA] text-[#1E6BA3] text-[11px] font-semibold">{roleLabel(u.role)}</span></td>
                         <td className="px-4 py-3 text-[#525252]">{u.siteName ?? "All Sites"}</td>
                         <td className="px-4 py-3">
-                          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold", u.isActive ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>{u.isActive ? "Active" : "Disabled"}</span>
+                          <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold", u.isActive ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#6B6B6B]")}>{u.isActive ? "Active" : "Disabled"}</span>
                         </td>
-                        <td className="px-4 py-3 text-[#737373] text-[12px]">{fmtDateTime(u.lastLoginAt)}</td>
+                        <td className="px-4 py-3 text-[#6B6B6B] text-[12px]">{fmtDateTime(u.lastLoginAt)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <button onClick={() => openEdit(u)} className="text-[#1E6BA3] hover:underline text-[12px] font-medium flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
@@ -239,19 +239,19 @@ export default function Settings() {
           )}
 
           {tab === "retention" && (
-            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
-              <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Retention Policy</h2>
+            <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6">
+              <h2 className="text-[18px] font-semibold text-[#000000]">Retention Policy</h2>
               <p className="text-[12px] text-[#525252] mb-4">Days a departed employee's record stays in Former Employees before archive eligibility. Configured per site in the workflow engine.</p>
               <div className="flex items-center gap-2 mb-5">
                 <Input value={retentionAll} onChange={(e) => setRetentionAll(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 90" className="h-[38px] w-[120px] text-[13px]" />
                 <Button size="sm" disabled={busy || !retentionAll}
                   onClick={async () => { setBusy(true); const err = await s.saveRetention("all", Number(retentionAll)); setBusy(false); if (err) setActionError(err); else { setNotice(`Retention set to ${retentionAll} days for all sites.`); setRetentionAll(""); } }}
-                  className="h-[38px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">Apply to all sites</Button>
+                  className="h-[38px] bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">Apply to all sites</Button>
               </div>
-              <div className="border border-[#E5E4E0] rounded-[10px] divide-y divide-[#E5E4E0] max-h-[420px] overflow-y-auto">
+              <div className="border border-[#DDDDDD] rounded-[6px] divide-y divide-[#DDDDDD] max-h-[420px] overflow-y-auto">
                 {s.retention.map((r) => (
                   <div key={r.siteId} className="flex items-center justify-between px-4 py-2.5">
-                    <span className="text-[13px] text-[#1A1A1A]">{r.siteName}</span>
+                    <span className="text-[13px] text-[#000000]">{r.siteName}</span>
                     <div className="flex items-center gap-2">
                       <Input defaultValue={String(r.retentionDays)} onBlur={async (e) => {
                         const v = Number(e.target.value);
@@ -268,8 +268,8 @@ export default function Settings() {
           )}
 
           {tab === "notifications" && (
-            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6 max-w-[560px]">
-              <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Notifications</h2>
+            <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6 max-w-[560px]">
+              <h2 className="text-[18px] font-semibold text-[#000000]">Notifications</h2>
               <p className="text-[12px] text-[#525252] mb-5">Which notifications you receive is decided by your role and site — the workflow engine routes them. Here you choose how you receive yours.</p>
               <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Delivery preference</label>
               <Select value={s.notifPref} onValueChange={async (v) => { const err = await s.saveNotifPref(v); if (err) setActionError(err); else setNotice("Notification preference saved."); }}>
@@ -285,8 +285,8 @@ export default function Settings() {
           )}
 
           {tab === "system" && (
-            <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-6">
-              <h2 className="text-[18px] font-semibold text-[#1A1A1A] mb-4">System</h2>
+            <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-6">
+              <h2 className="text-[18px] font-semibold text-[#000000] mb-4">System</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: "Platform Users", value: s.users.length },
@@ -294,13 +294,13 @@ export default function Settings() {
                   { label: "Workflows In Progress", value: workflowStats.inProgress },
                   { label: "Workflows Completed", value: workflowStats.completed },
                 ].map((c) => (
-                  <div key={c.label} className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] p-4">
-                    <div className="text-[22px] font-bold text-[#1A1A1A]">{c.value}</div>
+                  <div key={c.label} className="bg-[#FAFAFA] rounded-lg border border-[#DDDDDD] p-4">
+                    <div className="text-[22px] font-bold text-[#000000]">{c.value}</div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#9C9C9C] mt-1">{c.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-5 text-[12px] text-[#737373] space-y-1">
+              <div className="mt-5 text-[12px] text-[#6B6B6B] space-y-1">
                 <p>Application: Magaya ELMS v2 · Backend: Supabase (magaya-elm_platform, eu-west-2) · Hosting: Vercel</p>
                 <p>Authentication: email/password with recovery · Access control: role-based, database-enforced (RLS)</p>
               </div>
@@ -308,7 +308,7 @@ export default function Settings() {
           )}
 
           {actionError && (
-            <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+            <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
               <span>{actionError}</span>
               <button onClick={() => setActionError(null)} className="text-[12px] font-medium">Dismiss</button>
             </div>
@@ -360,7 +360,7 @@ export default function Settings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUserDialog(null)} className="text-[13px]">Cancel</Button>
-            <Button disabled={busy || !uName.trim() || !uRole || (userDialog === "add" && !uEmail.trim())} onClick={() => void submitUser()} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">
+            <Button disabled={busy || !uName.trim() || !uRole || (userDialog === "add" && !uEmail.trim())} onClick={() => void submitUser()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : userDialog === "add" ? "Create User" : "Save Changes"}
             </Button>
           </DialogFooter>

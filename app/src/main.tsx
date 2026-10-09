@@ -17,10 +17,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, fontFamily: 'sans-serif', maxWidth: 700, margin: '40px auto', background: '#fff', borderRadius: 10, border: '1px solid #E5E4E0' }}>
+        <div style={{ padding: 40, fontFamily: 'sans-serif', maxWidth: 700, margin: '40px auto', background: '#fff', borderRadius: 10, border: '1px solid #DDDDDD' }}>
           <h2 style={{ color: '#B91C1C', marginBottom: 16 }}>Application Error</h2>
           <pre style={{ background: '#f5f5f5', padding: 12, borderRadius: 6, fontSize: 12, overflowX: 'auto', maxHeight: 400 }}>{this.state.error}</pre>
-          <p style={{ color: '#737373', marginTop: 16, fontSize: 13 }}>Try refreshing the page. If the problem persists, contact support.</p>
+          <p style={{ color: '#6B6B6B', marginTop: 16, fontSize: 13 }}>Try refreshing the page. If the problem persists, contact support.</p>
         </div>
       )
     }

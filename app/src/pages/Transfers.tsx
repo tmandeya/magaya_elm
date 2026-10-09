@@ -102,12 +102,12 @@ function TransferList({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       {loadError && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load transfers: {loadError}</div>
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load transfers: {loadError}</div>
       )}
       {/* Page Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">
+          <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">
             Transfer Hub
           </h1>
           <p className="text-[13px] text-[#525252] mt-0.5">
@@ -117,14 +117,14 @@ function TransferList({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="h-10 gap-1.5 text-[13px] border-[#E5E4E0]"
+            className="h-10 gap-1.5 text-[13px] border-[#DDDDDD]"
           >
             <Download className="w-4 h-4" />
             Export
           </Button>
           <Button
             onClick={onNewTransfer}
-            className="h-10 gap-1.5 text-[13px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+            className="h-10 gap-1.5 text-[13px] bg-[#EDC817] hover:bg-[#D9B60F] text-black"
           >
             <Plus className="w-4 h-4" />
             New Transfer
@@ -133,7 +133,7 @@ function TransferList({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#E5E4E0]">
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#DDDDDD]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C9C9C]" />
           <Input
@@ -183,16 +183,16 @@ function TransferList({
           </SelectContent>
         </Select>
 
-        <div className="ml-auto text-[12px] text-[#737373]">
+        <div className="ml-auto text-[12px] text-[#6B6B6B]">
           Showing {filtered.length} result{filtered.length !== 1 && "s"}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#FAFAF8] hover:bg-[#FAFAF8] h-11">
+            <TableRow className="bg-[#FAFAFA] hover:bg-[#FAFAFA] h-11">
               <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-[#525252] w-[110px]">
                 Reference
               </TableHead>
@@ -223,7 +223,7 @@ function TransferList({
             {filtered.map((workflow) => (
               <TableRow
                 key={workflow.id}
-                className="h-[56px] cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                className="h-[56px] cursor-pointer hover:bg-[#FAFAFA] transition-colors"
                 onClick={() => onViewDetail(workflow.id)}
               >
                 <TableCell>
@@ -240,10 +240,10 @@ function TransferList({
                         .join("")}
                     </div>
                     <div>
-                      <div className="text-[13px] font-medium text-[#1A1A1A]">
+                      <div className="text-[13px] font-medium text-[#000000]">
                         {workflow.employee.name}
                       </div>
-                      <div className="text-[11px] text-[#737373]">{workflow.employee.code}</div>
+                      <div className="text-[11px] text-[#6B6B6B]">{workflow.employee.code}</div>
                     </div>
                   </div>
                 </TableCell>
@@ -275,7 +275,7 @@ function TransferList({
                     variant="secondary"
                     className={cn(
                       "text-[10px] font-medium h-6",
-                      STAGE_COLORS[workflow.currentStage] ?? "bg-[#F4F3EF] text-[#525252]"
+                      STAGE_COLORS[workflow.currentStage] ?? "bg-[#F9F9F9] text-[#525252]"
                     )}
                   >
                     {workflow.currentStage}
@@ -283,13 +283,13 @@ function TransferList({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="w-[70px] h-1.5 bg-[#E5E4E0] rounded-full overflow-hidden">
+                    <div className="w-[70px] h-1.5 bg-[#DDDDDD] rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#1E6BA3] rounded-full transition-all duration-500"
                         style={{ width: `${workflow.progress}%` }}
                       />
                     </div>
-                    <span className="text-[11px] text-[#737373] font-medium">
+                    <span className="text-[11px] text-[#6B6B6B] font-medium">
                       {workflow.progress}%
                     </span>
                   </div>
@@ -301,13 +301,13 @@ function TransferList({
                         e.stopPropagation();
                         onViewDetail(workflow.id);
                       }}
-                      className="p-1.5 rounded-md hover:bg-[#F4F3EF] text-[#737373] hover:text-[#1A1A1A] transition-colors"
+                      className="p-1.5 rounded-md hover:bg-[#F9F9F9] text-[#6B6B6B] hover:text-[#000000] transition-colors"
                       title="View"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      className="p-1.5 rounded-md hover:bg-[#F4F3EF] text-[#737373] hover:text-[#1A1A1A] transition-colors"
+                      className="p-1.5 rounded-md hover:bg-[#F9F9F9] text-[#6B6B6B] hover:text-[#000000] transition-colors"
                       title="Edit"
                     >
                       <Pencil className="w-4 h-4" />
@@ -322,7 +322,7 @@ function TransferList({
                 <TableCell colSpan={8} className="text-center py-12">
                   <div className="flex flex-col items-center">
                     <ArrowLeftRight className="w-12 h-12 text-[#9C9C9C] opacity-40 mb-3" />
-                    <div className="text-[14px] font-medium text-[#1A1A1A] mb-1">
+                    <div className="text-[14px] font-medium text-[#000000] mb-1">
                       No transfer workflows found
                     </div>
                     <div className="text-[12px] text-[#525252] mb-4">
@@ -330,7 +330,7 @@ function TransferList({
                     </div>
                     <Button
                       onClick={onNewTransfer}
-                      className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+                      className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       New Transfer
@@ -410,24 +410,24 @@ function TransferDetail({
       {/* Back button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-[13px] text-[#D4A017] hover:underline mb-4"
+        className="flex items-center gap-1.5 text-[13px] text-[#8C7600] hover:underline mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         Back to Transfer Hub
       </button>
       {actionError && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
       )}
 
       {/* Header Card */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5 mb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-[#E8F2FA] border border-[#1E6BA3] rounded-full">
               <span className="text-[#1E6BA3] text-[14px] font-bold">{workflow.reference}</span>
             </div>
             <div>
-              <div className="text-[18px] font-semibold text-[#1A1A1A]">
+              <div className="text-[18px] font-semibold text-[#000000]">
                 {workflow.employee.name}
               </div>
               <div className="flex items-center gap-2 text-[12px] text-[#525252] mt-0.5">
@@ -479,17 +479,17 @@ function TransferDetail({
       {/* Dual-Site Panels */}
       <div className="grid grid-cols-2 gap-5 mb-5">
         {/* Origin Panel */}
-        <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
-          <div className="p-4 border-l-[3px] border-l-[#B91C1C] border-b border-[#E5E4E0] bg-[#FAFAF8]">
+        <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
+          <div className="p-4 border-l-[3px] border-l-[#B91C1C] border-b border-[#DDDDDD] bg-[#FAFAFA]">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-[#FEF2F2] text-[#B91C1C] text-[10px] h-5">
                 Origin
               </Badge>
-              <span className="text-[14px] font-semibold text-[#1A1A1A]">
+              <span className="text-[14px] font-semibold text-[#000000]">
                 {workflow.originSite}
               </span>
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">Clearance activities</div>
+            <div className="text-[11px] text-[#6B6B6B] mt-1">Clearance activities</div>
           </div>
           <div className="p-4 space-y-3">
             {originStages
@@ -503,12 +503,12 @@ function TransferDetail({
                         ? "bg-[#1B7A43]"
                         : stage.status === "in-progress"
                         ? "bg-[#C27A06]"
-                        : "bg-[#E5E4E0]"
+                        : "bg-[#DDDDDD]"
                     )}
                   />
                   <div>
-                    <div className="text-[12px] font-medium text-[#1A1A1A]">{stage.name}</div>
-                    <div className="text-[11px] text-[#737373]">
+                    <div className="text-[12px] font-medium text-[#000000]">{stage.name}</div>
+                    <div className="text-[11px] text-[#6B6B6B]">
                       {stage.assignedTo}
                       {stage.completedBy && ` · Completed by ${stage.completedBy}`}
                     </div>
@@ -525,17 +525,17 @@ function TransferDetail({
         </div>
 
         {/* Destination Panel */}
-        <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
-          <div className="p-4 border-l-[3px] border-l-[#1B7A43] border-b border-[#E5E4E0] bg-[#FAFAF8]">
+        <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
+          <div className="p-4 border-l-[3px] border-l-[#1B7A43] border-b border-[#DDDDDD] bg-[#FAFAFA]">
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="bg-[#E8F5EC] text-[#1B7A43] text-[10px] h-5">
                 Destination
               </Badge>
-              <span className="text-[14px] font-semibold text-[#1A1A1A]">
+              <span className="text-[14px] font-semibold text-[#000000]">
                 {workflow.destinationSite}
               </span>
             </div>
-            <div className="text-[11px] text-[#737373] mt-1">Preparation activities</div>
+            <div className="text-[11px] text-[#6B6B6B] mt-1">Preparation activities</div>
           </div>
           <div className="p-4 space-y-3">
             {destStages.map((stage) => (
@@ -547,12 +547,12 @@ function TransferDetail({
                       ? "bg-[#1B7A43]"
                       : stage.status === "in-progress"
                       ? "bg-[#C27A06]"
-                      : "bg-[#E5E4E0]"
+                      : "bg-[#DDDDDD]"
                   )}
                 />
                 <div>
-                  <div className="text-[12px] font-medium text-[#1A1A1A]">{stage.name}</div>
-                  <div className="text-[11px] text-[#737373]">
+                  <div className="text-[12px] font-medium text-[#000000]">{stage.name}</div>
+                  <div className="text-[11px] text-[#6B6B6B]">
                     {stage.assignedTo}
                     {stage.completedBy && ` · Completed by ${stage.completedBy}`}
                   </div>
@@ -569,8 +569,8 @@ function TransferDetail({
       </div>
 
       {/* Approval Chain */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
-        <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-4">Approval Chain</h3>
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5 mb-5">
+        <h3 className="text-[14px] font-semibold text-[#000000] mb-4">Approval Chain</h3>
         <div className="grid grid-cols-4 gap-3">
           {approvalStages.map((stage) => (
             <div
@@ -581,13 +581,13 @@ function TransferDetail({
                   ? "border-[#1B7A43] bg-[#E8F5EC]"
                   : stage.status === "in-progress"
                   ? "border-[#1E6BA3] bg-[#E8F2FA]"
-                  : "border-[#E5E4E0] bg-[#FAFAF8]"
+                  : "border-[#DDDDDD] bg-[#FAFAFA]"
               )}
             >
-              <div className="text-[11px] font-medium text-[#1A1A1A]">{stage.name}</div>
-              <div className="text-[10px] text-[#737373] mt-0.5">{stage.siteName}</div>
+              <div className="text-[11px] font-medium text-[#000000]">{stage.name}</div>
+              <div className="text-[10px] text-[#6B6B6B] mt-0.5">{stage.siteName}</div>
               <div className="flex items-center gap-1.5 mt-2">
-                <div className="w-5 h-5 rounded-full bg-[#E5E4E0] flex items-center justify-center text-[8px] font-bold text-[#525252]">
+                <div className="w-5 h-5 rounded-full bg-[#DDDDDD] flex items-center justify-center text-[8px] font-bold text-[#525252]">
                   {(stage.assignedTo || "?")
                     .split(" ")
                     .map((n) => n[0])
@@ -616,7 +616,7 @@ function TransferDetail({
 
       {/* All Stages */}
       <div className="mb-5">
-        <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-3">All Stages</h3>
+        <h3 className="text-[16px] font-semibold text-[#000000] mb-3">All Stages</h3>
         <div className="space-y-3">
           {stages.map((stage, index) => (
             <div key={stage.name}>
@@ -652,10 +652,10 @@ function TransferDetail({
       </div>
 
       {/* Activity Log */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-        <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Activity Log</h3>
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+        <h3 className="text-[16px] font-semibold text-[#000000] mb-4">Activity Log</h3>
         <div className="relative pl-4">
-          <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[#E5E4E0]" />
+          <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[#DDDDDD]" />
           <div className="space-y-4">
             {activityLog.map((entry, index) => {
               const dotColor =
@@ -675,8 +675,8 @@ function TransferDetail({
                     )}
                   />
                   <div>
-                    <div className="text-[13px] font-medium text-[#1A1A1A]">{entry.message}</div>
-                    <div className="text-[11px] text-[#737373] mt-0.5">
+                    <div className="text-[13px] font-medium text-[#000000]">{entry.message}</div>
+                    <div className="text-[11px] text-[#6B6B6B] mt-0.5">
                       {entry.user} ·{" "}
                       {new Date(entry.timestamp).toLocaleString("en-US", {
                         day: "numeric",
@@ -755,8 +755,8 @@ function NewTransferWizard({ open, onClose, candidates, sites, onSubmit }: {
             {candidates.length === 0 && <p className="text-[11px] text-[#9C9C9C] mt-1.5">No active employees available.</p>}
           </div>
           {emp && (
-            <div className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] px-4 py-3 text-[12px] text-[#525252]">
-              Origin site: <strong className="text-[#1A1A1A]">{emp.site}</strong> · Department: <strong className="text-[#1A1A1A]">{emp.department}</strong>
+            <div className="bg-[#FAFAFA] rounded-lg border border-[#DDDDDD] px-4 py-3 text-[12px] text-[#525252]">
+              Origin site: <strong className="text-[#000000]">{emp.site}</strong> · Department: <strong className="text-[#000000]">{emp.department}</strong>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
@@ -786,7 +786,7 @@ function NewTransferWizard({ open, onClose, candidates, sites, onSubmit }: {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} className="text-[13px]">Cancel</Button>
-          <Button disabled={busy || !selectedEmployee || !destinationSiteId || !effectiveDate} onClick={() => void submit()} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">
+          <Button disabled={busy || !selectedEmployee || !destinationSiteId || !effectiveDate} onClick={() => void submit()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">
             {busy ? "Initiating..." : "Submit & Initiate"}
           </Button>
         </DialogFooter>
@@ -804,7 +804,7 @@ export default function Transfers() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
         <p className="text-[13px] text-[#9C9C9C]">Loading transfers...</p>
       </div>
     );
@@ -815,13 +815,13 @@ export default function Transfers() {
     if (!workflow) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="text-[16px] font-semibold text-[#1A1A1A] mb-2">Transfer not found</div>
+          <div className="text-[16px] font-semibold text-[#000000] mb-2">Transfer not found</div>
           <div className="text-[13px] text-[#525252] mb-4">
             The transfer workflow you are looking for does not exist.
           </div>
           <Button
             onClick={() => navigate("/transfers")}
-            className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+            className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"
           >
             Back to Transfer Hub
           </Button>

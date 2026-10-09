@@ -103,12 +103,12 @@ function OnboardingList({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
       {loadError && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load workflows: {loadError}</div>
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load workflows: {loadError}</div>
       )}
       {/* Page Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] tracking-[-0.02em]">
+          <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">
             Onboarding Hub
           </h1>
           <p className="text-[13px] text-[#525252] mt-0.5">
@@ -118,14 +118,14 @@ function OnboardingList({
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            className="h-10 gap-1.5 text-[13px] border-[#E5E4E0]"
+            className="h-10 gap-1.5 text-[13px] border-[#DDDDDD]"
           >
             <Download className="w-4 h-4" />
             Export
           </Button>
           <Button
             onClick={onNewOnboarding}
-            className="h-10 gap-1.5 text-[13px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+            className="h-10 gap-1.5 text-[13px] bg-[#EDC817] hover:bg-[#D9B60F] text-black"
           >
             <Plus className="w-4 h-4" />
             New Onboarding
@@ -134,7 +134,7 @@ function OnboardingList({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#E5E4E0]">
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#DDDDDD]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C9C9C]" />
           <Input
@@ -184,16 +184,16 @@ function OnboardingList({
           </SelectContent>
         </Select>
 
-        <div className="ml-auto text-[12px] text-[#737373]">
+        <div className="ml-auto text-[12px] text-[#6B6B6B]">
           Showing {filtered.length} result{filtered.length !== 1 && "s"}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#FAFAF8] hover:bg-[#FAFAF8] h-11">
+            <TableRow className="bg-[#FAFAFA] hover:bg-[#FAFAFA] h-11">
               <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-[#525252] w-[120px]">
                 Reference
               </TableHead>
@@ -227,27 +227,27 @@ function OnboardingList({
             {filtered.map((workflow) => (
               <TableRow
                 key={workflow.id}
-                className="h-[52px] cursor-pointer hover:bg-[#FAFAF8] transition-colors"
+                className="h-[52px] cursor-pointer hover:bg-[#FAFAFA] transition-colors"
                 onClick={() => onViewDetail(workflow.id)}
               >
                 <TableCell>
-                  <span className="text-[13px] font-semibold text-[#D4A017]">
+                  <span className="text-[13px] font-semibold text-[#8C7600]">
                     {workflow.reference}
                   </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[11px] font-semibold">
+                    <div className="w-8 h-8 rounded-full bg-[#EDC817] flex items-center justify-center text-black text-[11px] font-semibold">
                       {workflow.employee.name
                         .split(" ")
                         .map((n) => n[0])
                         .join("")}
                     </div>
                     <div>
-                      <div className="text-[13px] font-medium text-[#1A1A1A]">
+                      <div className="text-[13px] font-medium text-[#000000]">
                         {workflow.employee.name}
                       </div>
-                      <div className="text-[11px] text-[#737373]">
+                      <div className="text-[11px] text-[#6B6B6B]">
                         {workflow.employee.code}
                       </div>
                     </div>
@@ -267,7 +267,7 @@ function OnboardingList({
                     variant="secondary"
                     className={cn(
                       "text-[11px] font-medium h-6",
-                      STAGE_COLORS[workflow.currentStage] ?? "bg-[#F4F3EF] text-[#525252]"
+                      STAGE_COLORS[workflow.currentStage] ?? "bg-[#F9F9F9] text-[#525252]"
                     )}
                   >
                     {workflow.currentStage}
@@ -275,13 +275,13 @@ function OnboardingList({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="w-[80px] h-1.5 bg-[#E5E4E0] rounded-full overflow-hidden">
+                    <div className="w-[80px] h-1.5 bg-[#DDDDDD] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[#D4A017] rounded-full transition-all duration-500"
+                        className="h-full bg-[#EDC817] rounded-full transition-all duration-500"
                         style={{ width: `${workflow.progress}%` }}
                       />
                     </div>
-                    <span className="text-[11px] text-[#737373] font-medium">
+                    <span className="text-[11px] text-[#6B6B6B] font-medium">
                       {workflow.progress}%
                     </span>
                   </div>
@@ -296,13 +296,13 @@ function OnboardingList({
                         e.stopPropagation();
                         onViewDetail(workflow.id);
                       }}
-                      className="p-1.5 rounded-md hover:bg-[#F4F3EF] text-[#737373] hover:text-[#1A1A1A] transition-colors"
+                      className="p-1.5 rounded-md hover:bg-[#F9F9F9] text-[#6B6B6B] hover:text-[#000000] transition-colors"
                       title="View"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      className="p-1.5 rounded-md hover:bg-[#F4F3EF] text-[#737373] hover:text-[#1A1A1A] transition-colors"
+                      className="p-1.5 rounded-md hover:bg-[#F9F9F9] text-[#6B6B6B] hover:text-[#000000] transition-colors"
                       title="Edit"
                     >
                       <Pencil className="w-4 h-4" />
@@ -317,7 +317,7 @@ function OnboardingList({
                 <TableCell colSpan={9} className="text-center py-12">
                   <div className="flex flex-col items-center">
                     <UserPlus className="w-12 h-12 text-[#9C9C9C] opacity-40 mb-3" />
-                    <div className="text-[14px] font-medium text-[#1A1A1A] mb-1">
+                    <div className="text-[14px] font-medium text-[#000000] mb-1">
                       No onboarding workflows found
                     </div>
                     <div className="text-[12px] text-[#525252] mb-4">
@@ -325,7 +325,7 @@ function OnboardingList({
                     </div>
                     <Button
                       onClick={onNewOnboarding}
-                      className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+                      className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       New Onboarding
@@ -409,37 +409,37 @@ function OnboardingDetail({
       {/* Back button */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-[13px] text-[#D4A017] hover:underline mb-4"
+        className="flex items-center gap-1.5 text-[13px] text-[#8C7600] hover:underline mb-4"
       >
         <ChevronLeft className="w-4 h-4" />
         Back to Onboarding Hub
       </button>
       {actionError && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
       )}
       {workflow.status === "Completed" ? (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 flex items-center justify-between gap-3">
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 flex items-center justify-between gap-3">
           <span className="text-[13px] text-[#1B7A43] font-medium">Onboarding complete — all departments and HR have signed off.</span>
           <Button size="sm" onClick={() => setDocOpen(true)} className="bg-[#1B7A43] hover:bg-[#14603a] text-white text-[12px] h-8 shrink-0">
             Onboarding Document
           </Button>
         </div>
       ) : (
-        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#1E6BA3]/25 bg-[#1E6BA3]/5 text-[12px] text-[#1E6BA3]">
+        <div className="mb-4 px-4 py-3 rounded-[6px] border border-[#1E6BA3]/25 bg-[#1E6BA3]/5 text-[12px] text-[#1E6BA3]">
           HR, Security, IT and Administration can complete their stages in any order. Each department signs off by completing its own stage; HR Completion opens once all four are done.
         </div>
       )}
       <OnboardingDocument workflow={workflow} open={docOpen} onClose={() => setDocOpen(false)} />
 
       {/* Header Card */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5 mb-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="px-4 py-2 bg-[#D4A017] rounded-full">
-              <span className="text-white text-[14px] font-bold">{workflow.reference}</span>
+            <div className="px-4 py-2 bg-[#EDC817] rounded-full">
+              <span className="text-black text-[14px] font-bold">{workflow.reference}</span>
             </div>
             <div>
-              <div className="text-[18px] font-semibold text-[#1A1A1A]">
+              <div className="text-[18px] font-semibold text-[#000000]">
                 {workflow.employee.name}
               </div>
               <div className="flex items-center gap-2 text-[12px] text-[#525252] mt-0.5">
@@ -456,7 +456,7 @@ function OnboardingDetail({
           </div>
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <div className="text-[14px] font-semibold text-[#D4A017]">
+              <div className="text-[14px] font-semibold text-[#8C7600]">
                 {progressPercent}% complete
               </div>
               <Badge
@@ -483,7 +483,7 @@ function OnboardingDetail({
       <div className="grid grid-cols-[1fr_340px] gap-5">
         {/* Left: Stage Details */}
         <div className="space-y-3">
-          <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2">Stage Details</h3>
+          <h3 className="text-[16px] font-semibold text-[#000000] mb-2">Stage Details</h3>
           {stages.map((stage, index) => (
             <div key={stage.name}>
               <WorkflowStageCard
@@ -510,7 +510,7 @@ function OnboardingDetail({
                   <div className="mt-2 flex justify-end">
                     <Button
                       size="sm"
-                      className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[12px] h-8"
+                      className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px] h-8"
                       onClick={() => setSignOffStage(index)}
                     >
                       <Check className="w-3.5 h-3.5 mr-1" />
@@ -524,21 +524,21 @@ function OnboardingDetail({
 
         {/* Right: Employee Snapshot */}
         <div>
-          <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 sticky top-4">
-            <h3 className="text-[14px] font-semibold text-[#1A1A1A] mb-4">
+          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-5 sticky top-4">
+            <h3 className="text-[14px] font-semibold text-[#000000] mb-4">
               Employee Snapshot
             </h3>
             <div className="flex flex-col items-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[18px] font-bold mb-2">
+              <div className="w-16 h-16 rounded-full bg-[#EDC817] flex items-center justify-center text-black text-[18px] font-bold mb-2">
                 {workflow.employee.name
                   .split(" ")
                   .map((n) => n[0])
                   .join("")}
               </div>
-              <div className="text-[15px] font-semibold text-[#1A1A1A]">
+              <div className="text-[15px] font-semibold text-[#000000]">
                 {workflow.employee.name}
               </div>
-              <div className="text-[12px] text-[#737373]">{workflow.employee.code}</div>
+              <div className="text-[12px] text-[#6B6B6B]">{workflow.employee.code}</div>
               <Badge
                 variant="secondary"
                 className="mt-2 bg-[#FDF3E0] text-[#C27A06] text-[11px]"
@@ -547,34 +547,34 @@ function OnboardingDetail({
               </Badge>
             </div>
 
-            <div className="space-y-3 border-t border-[#E5E4E0] pt-4">
+            <div className="space-y-3 border-t border-[#DDDDDD] pt-4">
               <div className="flex justify-between">
-                <span className="text-[12px] text-[#737373]">Site</span>
-                <span className="text-[12px] font-medium text-[#1A1A1A]">
+                <span className="text-[12px] text-[#6B6B6B]">Site</span>
+                <span className="text-[12px] font-medium text-[#000000]">
                   {workflow.employee.site}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[12px] text-[#737373]">Department</span>
-                <span className="text-[12px] font-medium text-[#1A1A1A]">
+                <span className="text-[12px] text-[#6B6B6B]">Department</span>
+                <span className="text-[12px] font-medium text-[#000000]">
                   {workflow.employee.department}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[12px] text-[#737373]">Initiated</span>
-                <span className="text-[12px] font-medium text-[#1A1A1A]">
+                <span className="text-[12px] text-[#6B6B6B]">Initiated</span>
+                <span className="text-[12px] font-medium text-[#000000]">
                   {workflow.initiatedDate}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[12px] text-[#737373]">Expected Completion</span>
-                <span className="text-[12px] font-medium text-[#1A1A1A]">
+                <span className="text-[12px] text-[#6B6B6B]">Expected Completion</span>
+                <span className="text-[12px] font-medium text-[#000000]">
                   {workflow.expectedCompletion}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[12px] text-[#737373]">Initiated By</span>
-                <span className="text-[12px] font-medium text-[#1A1A1A]">
+                <span className="text-[12px] text-[#6B6B6B]">Initiated By</span>
+                <span className="text-[12px] font-medium text-[#000000]">
                   {workflow.initiatedBy}
                 </span>
               </div>
@@ -584,11 +584,11 @@ function OnboardingDetail({
       </div>
 
       {/* Activity Log */}
-      <div className="mt-5 bg-white rounded-[10px] border border-[#E5E4E0] p-5">
-        <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-4">Activity Log</h3>
+      <div className="mt-5 bg-white rounded-[6px] border border-[#DDDDDD] p-5">
+        <h3 className="text-[16px] font-semibold text-[#000000] mb-4">Activity Log</h3>
         <div className="relative pl-4">
           {/* Timeline line */}
-          <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[#E5E4E0]" />
+          <div className="absolute left-[7px] top-0 bottom-0 w-[2px] bg-[#DDDDDD]" />
 
           <div className="space-y-4">
             {activityLog.map((entry, index) => {
@@ -610,10 +610,10 @@ function OnboardingDetail({
                     )}
                   />
                   <div>
-                    <div className="text-[13px] font-medium text-[#1A1A1A]">
+                    <div className="text-[13px] font-medium text-[#000000]">
                       {entry.message}
                     </div>
-                    <div className="text-[11px] text-[#737373] mt-0.5">
+                    <div className="text-[11px] text-[#6B6B6B] mt-0.5">
                       {entry.user} ·{" "}
                       {new Date(entry.timestamp).toLocaleString("en-US", {
                         day: "numeric",
@@ -736,7 +736,7 @@ function NewOnboardingWizard({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[800px] max-h-[85vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#E5E4E0]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-[#DDDDDD]">
           <DialogTitle className="text-[18px] font-semibold">New Onboarding</DialogTitle>
         </DialogHeader>
 
@@ -753,11 +753,11 @@ function NewOnboardingWizard({
                   </label>
                   {candidates.length > 0 && (
                     <div className="flex items-center gap-3 text-[12px]">
-                      <span className="text-[#737373]">{selectedEmployees.length} selected</span>
-                      <button type="button" className="text-[#A67C0A] font-medium hover:underline"
+                      <span className="text-[#6B6B6B]">{selectedEmployees.length} selected</span>
+                      <button type="button" className="text-[#8C7600] font-medium hover:underline"
                         onClick={() => setSelectedEmployees(Array.from(new Set([...selectedEmployees, ...filteredCandidates.map((c) => c.id)])))}>Select all{empSearch ? " shown" : ""}</button>
                       {selectedEmployees.length > 0 && (
-                        <button type="button" className="text-[#737373] hover:underline" onClick={() => setSelectedEmployees([])}>Clear</button>
+                        <button type="button" className="text-[#6B6B6B] hover:underline" onClick={() => setSelectedEmployees([])}>Clear</button>
                       )}
                     </div>
                   )}
@@ -767,20 +767,20 @@ function NewOnboardingWizard({
                 ) : (
                   <>
                     <Input value={empSearch} onChange={(e) => setEmpSearch(e.target.value)} placeholder="Search by name, ID or site..." className="h-9 text-[13px] mb-2" />
-                    <div className="border border-[#E5E4E0] rounded-lg max-h-[220px] overflow-y-auto divide-y divide-[#F0EFEB]">
+                    <div className="border border-[#DDDDDD] rounded-lg max-h-[220px] overflow-y-auto divide-y divide-[#EEEEEE]">
                       {filteredCandidates.map((emp) => (
-                        <label key={emp.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#FAFAF8]">
+                        <label key={emp.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#FAFAFA]">
                           <Checkbox checked={selectedEmployees.includes(emp.id)} onCheckedChange={() => toggleEmployee(emp.id)} />
                           <div className="min-w-0">
-                            <div className="text-[13px] font-medium text-[#1A1A1A] truncate">{emp.name} <span className="text-[#9C9C9C] font-normal">({emp.code})</span></div>
-                            <div className="text-[11px] text-[#737373] truncate">{emp.site} · {emp.department}</div>
+                            <div className="text-[13px] font-medium text-[#000000] truncate">{emp.name} <span className="text-[#9C9C9C] font-normal">({emp.code})</span></div>
+                            <div className="text-[11px] text-[#6B6B6B] truncate">{emp.site} · {emp.department}</div>
                           </div>
                         </label>
                       ))}
                       {filteredCandidates.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-[#9C9C9C]">No matches</div>}
                     </div>
                     {selectedEmployees.length > 1 && (
-                      <p className="text-[11px] text-[#737373] mt-1.5">The same start date, security, IT and admin requirements apply to all {selectedEmployees.length} employees. Each gets their own onboarding workflow.</p>
+                      <p className="text-[11px] text-[#6B6B6B] mt-1.5">The same start date, security, IT and admin requirements apply to all {selectedEmployees.length} employees. Each gets their own onboarding workflow.</p>
                     )}
                   </>
                 )}
@@ -828,7 +828,7 @@ function NewOnboardingWizard({
           {/* Step 2: Security */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">
+              <h3 className="text-[14px] font-semibold text-[#000000]">
                 Security Clearance Requirements
               </h3>
 
@@ -874,7 +874,7 @@ function NewOnboardingWizard({
           {/* Step 3: IT */}
           {step === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">IT Provisioning</h3>
+              <h3 className="text-[14px] font-semibold text-[#000000]">IT Provisioning</h3>
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <Checkbox checked={m365Needed} onCheckedChange={(c) => setM365Needed(!!c)} />
@@ -894,8 +894,8 @@ function NewOnboardingWizard({
                       className={cn(
                         "px-3 py-1.5 rounded-md text-[12px] font-medium border transition-all",
                         selectedHardware.includes(item)
-                          ? "bg-[#D4A017] border-[#D4A017] text-white"
-                          : "bg-white border-[#E5E4E0] text-[#525252] hover:border-[#C4C3BF]"
+                          ? "bg-[#EDC817] border-[#EDC817] text-black"
+                          : "bg-white border-[#DDDDDD] text-[#525252] hover:border-[#C4C4C4]"
                       )}
                     >
                       {item}
@@ -917,8 +917,8 @@ function NewOnboardingWizard({
                       className={cn(
                         "px-3 py-1.5 rounded-md text-[12px] font-medium border transition-all",
                         selectedSoftware.includes(item)
-                          ? "bg-[#D4A017] border-[#D4A017] text-white"
-                          : "bg-white border-[#E5E4E0] text-[#525252] hover:border-[#C4C3BF]"
+                          ? "bg-[#EDC817] border-[#EDC817] text-black"
+                          : "bg-white border-[#DDDDDD] text-[#525252] hover:border-[#C4C4C4]"
                       )}
                     >
                       {item}
@@ -932,7 +932,7 @@ function NewOnboardingWizard({
           {/* Step 4: Admin */}
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Administrative Setup</h3>
+              <h3 className="text-[14px] font-semibold text-[#000000]">Administrative Setup</h3>
 
               <div className="space-y-3">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -963,25 +963,25 @@ function NewOnboardingWizard({
           {/* Step 5: Review */}
           {step === 4 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
-              <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Review & Submit</h3>
+              <h3 className="text-[14px] font-semibold text-[#000000]">Review & Submit</h3>
 
-              <div className="p-4 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg">
+              <div className="p-4 bg-[#FAFAFA] border border-[#DDDDDD] rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[13px] font-medium text-[#1A1A1A]">{selectedEmpData.length} employee{selectedEmpData.length === 1 ? "" : "s"} to onboard</span>
-                  <span className="text-[12px] text-[#737373]">Start date: <strong className="text-[#1A1A1A]">{startDate}</strong></span>
+                  <span className="text-[13px] font-medium text-[#000000]">{selectedEmpData.length} employee{selectedEmpData.length === 1 ? "" : "s"} to onboard</span>
+                  <span className="text-[12px] text-[#6B6B6B]">Start date: <strong className="text-[#000000]">{startDate}</strong></span>
                 </div>
                 <div className="max-h-[140px] overflow-y-auto space-y-1">
                   {selectedEmpData.map((e) => (
                     <div key={e.id} className="flex justify-between text-[12px]">
-                      <span className="text-[#1A1A1A]">{e.name} <span className="text-[#9C9C9C]">({e.code})</span></span>
-                      <span className="text-[#737373]">{e.site} · {e.department}</span>
+                      <span className="text-[#000000]">{e.name} <span className="text-[#9C9C9C]">({e.code})</span></span>
+                      <span className="text-[#6B6B6B]">{e.site} · {e.department}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 border border-[#E5E4E0] rounded-lg">
+                <div className="p-3 border border-[#DDDDDD] rounded-lg">
                   <div className="text-[11px] font-semibold text-[#C27A06] mb-1.5">
                     Security
                   </div>
@@ -991,7 +991,7 @@ function NewOnboardingWizard({
                     <div>Level: {clearanceLevel}</div>
                   </div>
                 </div>
-                <div className="p-3 border border-[#E5E4E0] rounded-lg">
+                <div className="p-3 border border-[#DDDDDD] rounded-lg">
                   <div className="text-[11px] font-semibold text-[#7C3AED] mb-1.5">IT</div>
                   <div className="text-[11px] text-[#525252] space-y-0.5">
                     <div>M365: {m365Needed ? "Yes" : "No"}</div>
@@ -999,7 +999,7 @@ function NewOnboardingWizard({
                     <div>Software: {selectedSoftware.join(", ") || "None"}</div>
                   </div>
                 </div>
-                <div className="p-3 border border-[#E5E4E0] rounded-lg">
+                <div className="p-3 border border-[#DDDDDD] rounded-lg">
                   <div className="text-[11px] font-semibold text-[#525252] mb-1.5">Admin</div>
                   <div className="text-[11px] text-[#525252] space-y-0.5">
                     <div>Parking: {parkingNeeded ? "Yes" : "No"}</div>
@@ -1022,7 +1022,7 @@ function NewOnboardingWizard({
         {submitError && (
           <div className="mx-6 mb-2 px-4 py-3 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{submitError}</div>
         )}
-        <DialogFooter className="px-6 py-4 border-t border-[#E5E4E0]">
+        <DialogFooter className="px-6 py-4 border-t border-[#DDDDDD]">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} className="text-[13px]">
               Back
@@ -1032,7 +1032,7 @@ function NewOnboardingWizard({
             <Button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed()}
-              className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
+              className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]"
             >
               Next
             </Button>
@@ -1061,7 +1061,7 @@ function NewOnboardingWizard({
                 handleClose();
               }}
               disabled={!canProceed() || submitting}
-              className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
+              className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]"
             >
               {submitting ? "Initiating..." : selectedEmployees.length > 1 ? `Initiate ${selectedEmployees.length} Onboardings` : "Submit & Initiate"}
             </Button>
@@ -1085,7 +1085,7 @@ export default function Onboarding() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <div className="w-8 h-8 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
         <p className="text-[13px] text-[#9C9C9C]">Loading onboarding workflows...</p>
       </div>
     );
@@ -1097,7 +1097,7 @@ export default function Onboarding() {
     if (!workflow) {
       return (
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="text-[16px] font-semibold text-[#1A1A1A] mb-2">
+          <div className="text-[16px] font-semibold text-[#000000] mb-2">
             Onboarding not found
           </div>
           <div className="text-[13px] text-[#525252] mb-4">
@@ -1105,7 +1105,7 @@ export default function Onboarding() {
           </div>
           <Button
             onClick={() => navigate("/onboarding")}
-            className="bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+            className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"
           >
             Back to Onboarding Hub
           </Button>

@@ -15,8 +15,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 
 const GENDER_DATA = [
   { name: "Male", value: 68, color: "#1E6BA3" },
-  { name: "Female", value: 30, color: "#D4A017" },
-  { name: "Not Specified", value: 2, color: "#E5E4E0" },
+  { name: "Female", value: 30, color: "#EDC817" },
+  { name: "Not Specified", value: 2, color: "#DDDDDD" },
 ];
 
 
@@ -95,16 +95,16 @@ export default function Sites() {
   return (
     <div className="p-6 space-y-5">
       {loading && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[#E5E4E0] bg-white">
-          <div className="w-5 h-5 border-[3px] border-[#E5E4E0] border-t-[#D4A017] rounded-full animate-spin" />
+        <div className="flex items-center gap-3 px-4 py-3 rounded-[6px] border border-[#DDDDDD] bg-white">
+          <div className="w-5 h-5 border-[3px] border-[#DDDDDD] border-t-[#EDC817] rounded-full animate-spin" />
           <span className="text-[13px] text-[#9C9C9C]">Loading sites...</span>
         </div>
       )}
       {loadError && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load sites: {loadError}</div>
+        <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">Failed to load sites: {loadError}</div>
       )}
       {actionError && (
-        <div className="px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+        <div className="px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)} className="text-[#B91C1C] hover:text-[#991B1B] text-[12px] font-medium">Dismiss</button>
         </div>
@@ -113,22 +113,22 @@ export default function Sites() {
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-[28px] font-bold text-[#1A1A1A] leading-tight tracking-[-0.02em]">Sites Management</h1>
+          <h1 className="text-[28px] font-bold text-[#000000] leading-tight tracking-[-0.02em]">Sites Management</h1>
           <p className="text-[13px] text-[#525252] mt-1">Manage operational sites, key personnel, and approval configurations</p>
         </div>
-        <Button onClick={() => setAddOpen(true)} className="bg-[#D4A017] hover:bg-[#A67C0A] text-white h-[40px] px-4 gap-2">
+        <Button onClick={() => setAddOpen(true)} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black h-[40px] px-4 gap-2">
           <Plus className="w-4 h-4" /> Add Site
         </Button>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-3 bg-white p-3 rounded-[10px] border border-[#E5E4E0]">
+      <div className="flex items-center gap-3 bg-white p-3 rounded-[6px] border border-[#DDDDDD]">
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C9C]" />
-          <Input placeholder="Search by site name, location..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 w-[240px] h-[36px] border-[#E5E4E0] text-[13px]" />
+          <Input placeholder="Search by site name, location..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 w-[240px] h-[36px] border-[#DDDDDD] text-[13px]" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px] h-[36px] text-[13px] border-[#E5E4E0]">
+          <SelectTrigger className="w-[140px] h-[36px] text-[13px] border-[#DDDDDD]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -138,7 +138,7 @@ export default function Sites() {
           </SelectContent>
         </Select>
         <Select value={personnelFilter} onValueChange={setPersonnelFilter}>
-          <SelectTrigger className="w-[160px] h-[36px] text-[13px] border-[#E5E4E0]">
+          <SelectTrigger className="w-[160px] h-[36px] text-[13px] border-[#DDDDDD]">
             <SelectValue placeholder="Personnel" />
           </SelectTrigger>
           <SelectContent>
@@ -150,11 +150,11 @@ export default function Sites() {
       </div>
 
       {/* Sites Table */}
-      <div className="bg-white rounded-[10px] border border-[#E5E4E0] overflow-hidden">
+      <div className="bg-white rounded-[6px] border border-[#DDDDDD] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#FAFAF8] border-b border-[#E5E4E0]">
+              <tr className="bg-[#FAFAFA] border-b border-[#DDDDDD]">
                 <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Site Name</th>
                 <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Location</th>
                 <th className="text-left px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.05em] text-[#525252]">Employees</th>
@@ -169,16 +169,16 @@ export default function Sites() {
                 const personnel = site.personnel;
                 const assignedCount = personnel ? Object.keys(personnel).length : 0;
                 return (
-                  <tr key={site.id} className="border-b border-[#E5E4E0] hover:bg-[#FAFAF8] transition-colors" style={{ height: "64px" }}>
+                  <tr key={site.id} className="border-b border-[#DDDDDD] hover:bg-[#FAFAFA] transition-colors" style={{ height: "64px" }}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-semibold text-[#1A1A1A]">{site.name}</span>
+                        <span className="text-[14px] font-semibold text-[#000000]">{site.name}</span>
                       </div>
                       <span className="text-[11px] text-[#9C9C9C]">{site.address}</span>
                     </td>
                     <td className="px-4 py-3 text-[13px] text-[#525252]">{site.location || "—"}</td>
                     <td className="px-4 py-3">
-                      <span className="text-[14px] font-semibold text-[#1A1A1A]">{site.employees}</span>
+                      <span className="text-[14px] font-semibold text-[#000000]">{site.employees}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center -space-x-2">
@@ -186,13 +186,13 @@ export default function Sites() {
                           const assigned = personnel?.[role.key];
                           if (assigned) {
                             return (
-                              <div key={role.key} className={cn("relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-2 ring-white", roleRingColors[role.color])} style={{ backgroundColor: role.color === "gm" ? "#1A1A1A" : undefined }} title={`${role.label}: ${assigned.name}`}>
+                              <div key={role.key} className={cn("relative w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-2 ring-white", roleRingColors[role.color])} style={{ backgroundColor: role.color === "gm" ? "#000000" : undefined }} title={`${role.label}: ${assigned.name}`}>
                                 {getInitials(assigned.name)}
                               </div>
                             );
                           }
                           return (
-                            <div key={role.key} className="w-7 h-7 rounded-full bg-[#E5E4E0] flex items-center justify-center ring-2 ring-white" title={`${role.label}: Not assigned`}>
+                            <div key={role.key} className="w-7 h-7 rounded-full bg-[#DDDDDD] flex items-center justify-center ring-2 ring-white" title={`${role.label}: Not assigned`}>
                               <span className="text-[#9C9C9C] text-[10px]">+</span>
                             </div>
                           );
@@ -206,16 +206,16 @@ export default function Sites() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className={cn("text-[11px] font-semibold h-[24px] border-0", site.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>
+                      <Badge variant="outline" className={cn("text-[11px] font-semibold h-[24px] border-0", site.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#6B6B6B]")}>
                         {site.status}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-[#9C9C9C] hover:text-[#D4A017]" onClick={() => openDetail(site)}>
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-[#9C9C9C] hover:text-[#8C7600]" onClick={() => openDetail(site)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="w-8 h-8 text-[#9C9C9C] hover:text-[#D4A017]" onClick={() => openDetail(site)}>
+                        <Button variant="ghost" size="icon" className="w-8 h-8 text-[#9C9C9C] hover:text-[#8C7600]" onClick={() => openDetail(site)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                       </div>
@@ -227,7 +227,7 @@ export default function Sites() {
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-[#9C9C9C]">
                     <Building2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-[16px] font-semibold text-[#1A1A1A]">No sites found</p>
+                    <p className="text-[16px] font-semibold text-[#000000]">No sites found</p>
                     <p className="text-[13px] text-[#525252]">Try adjusting your search or filters</p>
                   </td>
                 </tr>
@@ -241,18 +241,18 @@ export default function Sites() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-[960px] max-h-[85vh] overflow-y-auto p-0 gap-0">
           {actionError && (
-            <div className="mx-6 mt-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
+            <div className="mx-6 mt-4 px-4 py-3 rounded-[6px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C] flex items-center justify-between">
               <span>{actionError}</span>
               <button onClick={() => setActionError(null)} className="text-[#B91C1C] hover:text-[#991B1B] text-[12px] font-medium">Dismiss</button>
             </div>
           )}
           {selectedSite && (
             <>
-              <DialogHeader className="px-6 py-4 border-b border-[#E5E4E0]">
+              <DialogHeader className="px-6 py-4 border-b border-[#DDDDDD]">
                 <div className="flex items-center justify-between">
                   <DialogTitle className="text-[20px] font-semibold">{selectedSite.name}</DialogTitle>
                   <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={cn("text-[11px] font-semibold h-[24px] border-0", selectedSite.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#737373]")}>
+                    <Badge variant="outline" className={cn("text-[11px] font-semibold h-[24px] border-0", selectedSite.status === "Active" ? "bg-[#E8F5EC] text-[#1B7A43]" : "bg-[#F5F5F5] text-[#6B6B6B]")}>
                       {selectedSite.status}
                     </Badge>
                   </div>
@@ -260,9 +260,9 @@ export default function Sites() {
               </DialogHeader>
               <div className="px-6 py-4">
                 <Tabs defaultValue="overview">
-                  <TabsList className="w-full border-b border-[#E5E4E0] rounded-none h-auto p-0 bg-transparent">
+                  <TabsList className="w-full border-b border-[#DDDDDD] rounded-none h-auto p-0 bg-transparent">
                     {["overview", "personnel", "approval", "statistics"].map((tab) => (
-                      <TabsTrigger key={tab} value={tab} className="flex-1 capitalize text-[13px] font-medium py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#D4A017] data-[state=active]:text-[#D4A017] data-[state=active]:bg-transparent data-[state=active]:shadow-none">
+                      <TabsTrigger key={tab} value={tab} className="flex-1 capitalize text-[13px] font-medium py-3 rounded-none border-b-2 border-transparent data-[state=active]:border-[#EDC817] data-[state=active]:text-[#8C7600] data-[state=active]:bg-transparent data-[state=active]:shadow-none">
                         {tab === "overview" ? "Overview" : tab === "personnel" ? "Key Personnel" : tab === "approval" ? "Approval Config" : "Statistics"}
                       </TabsTrigger>
                     ))}
@@ -272,24 +272,24 @@ export default function Sites() {
                   <TabsContent value="overview" className="mt-4">
                     <div className="grid grid-cols-5 gap-6">
                       <div className="col-span-3 space-y-4">
-                        <h3 className="text-[16px] font-semibold text-[#1A1A1A]">Site Details</h3>
+                        <h3 className="text-[16px] font-semibold text-[#000000]">Site Details</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Name</label>
-                            <Input defaultValue={selectedSite.name} className="h-[40px] border-[#E5E4E0] text-[13px]" />
+                            <Input defaultValue={selectedSite.name} className="h-[40px] border-[#DDDDDD] text-[13px]" />
                           </div>
                           <div>
                             <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Location</label>
-                            <Input defaultValue={selectedSite.location} className="h-[40px] border-[#E5E4E0] text-[13px]" />
+                            <Input defaultValue={selectedSite.location} className="h-[40px] border-[#DDDDDD] text-[13px]" />
                           </div>
                           <div className="col-span-2">
                             <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Address</label>
-                            <Input defaultValue={selectedSite.address} className="h-[40px] border-[#E5E4E0] text-[13px]" />
+                            <Input defaultValue={selectedSite.address} className="h-[40px] border-[#DDDDDD] text-[13px]" />
                           </div>
 
                           <div>
                             <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Date Added</label>
-                            <Input type="date" defaultValue={selectedSite.established} readOnly className="h-[40px] border-[#E5E4E0] text-[13px] bg-[#FAFAF8]" />
+                            <Input type="date" defaultValue={selectedSite.established} readOnly className="h-[40px] border-[#DDDDDD] text-[13px] bg-[#FAFAFA]" />
                           </div>
                           <div className="col-span-2 flex items-center gap-3">
                             <label className="text-[13px] font-medium text-[#525252]">Status</label>
@@ -301,18 +301,18 @@ export default function Sites() {
                         </div>
                       </div>
                       <div className="col-span-2 space-y-3">
-                        <h3 className="text-[16px] font-semibold text-[#1A1A1A]">Quick Stats</h3>
-                        <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#D4A017]">
+                        <h3 className="text-[16px] font-semibold text-[#000000]">Quick Stats</h3>
+                        <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#EDC817]">
                           <div className="text-[12px] text-[#525252] uppercase tracking-wider">Active Employees</div>
                           <div className="text-[24px] font-bold text-[#1B7A43] mt-1">{selectedSite.employees}</div>
                         </div>
-                        <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#C27A06]">
+                        <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#C27A06]">
                           <div className="text-[12px] text-[#525252] uppercase tracking-wider">Open Workflows</div>
                           <div className="text-[13px] text-[#C27A06] mt-1 font-medium">
                             {selectedSite.workflows.onboarding} onboarding, {selectedSite.workflows.offboarding} offboarding, {selectedSite.workflows.transfers} transfer
                           </div>
                         </div>
-                        <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#1E6BA3]">
+                        <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#1E6BA3]">
                           <div className="text-[12px] text-[#525252] uppercase tracking-wider">Personnel Assigned</div>
                           <div className="text-[13px] text-[#1E6BA3] mt-1 font-medium">
                             {selectedSite.personnelCount} of 6 roles
@@ -329,21 +329,21 @@ export default function Sites() {
                         const assigned = selectedSite.personnel[role.key];
                         const RoleIcon = roleIcons[role.color] || UserCircle2;
                         return (
-                          <div key={role.key} className="bg-[#FAFAF8] rounded-lg border border-[#E5E4E0] p-4">
+                          <div key={role.key} className="bg-[#FAFAFA] rounded-lg border border-[#DDDDDD] p-4">
                             <div className="flex items-center gap-2 mb-3">
-                              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", role.color === "hr" ? "bg-[#FEF2F2]" : role.color === "it" ? "bg-[#F3E8FF]" : role.color === "security" ? "bg-[#E8F2FA]" : role.color === "admin" ? "bg-[#F0FDF4]" : role.color === "hod" ? "bg-[#FFF7ED]" : "bg-[#1A1A1A]")}>
-                                <RoleIcon className={cn("w-5 h-5", role.color === "gm" ? "text-[#D4A017]" : role.color === "hr" ? "text-[#B91C1C]" : role.color === "it" ? "text-[#7C3AED]" : role.color === "security" ? "text-[#1E6BA3]" : role.color === "admin" ? "text-[#166534]" : "text-[#C27A06]")} />
+                              <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center", role.color === "hr" ? "bg-[#FEF2F2]" : role.color === "it" ? "bg-[#F3E8FF]" : role.color === "security" ? "bg-[#E8F2FA]" : role.color === "admin" ? "bg-[#F0FDF4]" : role.color === "hod" ? "bg-[#FFF7ED]" : "bg-[#000000]")}>
+                                <RoleIcon className={cn("w-5 h-5", role.color === "gm" ? "text-[#8C7600]" : role.color === "hr" ? "text-[#B91C1C]" : role.color === "it" ? "text-[#7C3AED]" : role.color === "security" ? "text-[#1E6BA3]" : role.color === "admin" ? "text-[#166534]" : "text-[#C27A06]")} />
                               </div>
-                              <span className="text-[14px] font-semibold text-[#1A1A1A]">{role.label}</span>
+                              <span className="text-[14px] font-semibold text-[#000000]">{role.label}</span>
                             </div>
                             {assigned ? (
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-10 h-10 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[13px] font-semibold">
+                                  <div className="w-10 h-10 rounded-full bg-[#EDC817] flex items-center justify-center text-black text-[13px] font-semibold">
                                     {getInitials(assigned.name)}
                                   </div>
                                   <div>
-                                    <div className="text-[13px] font-medium text-[#1A1A1A]">{assigned.name}</div>
+                                    <div className="text-[13px] font-medium text-[#000000]">{assigned.name}</div>
                                     <div className="text-[11px] text-[#9C9C9C]">{assigned.code}</div>
                                   </div>
                                 </div>
@@ -356,7 +356,7 @@ export default function Sites() {
                               <div className="space-y-2">
                                 <p className="text-[12px] text-[#9C9C9C]">Not assigned</p>
                                 <Select value={pendingAssign[`${selectedSite.id}:${role.key}`] ?? ""} onValueChange={(v) => setPendingAssign((p) => ({ ...p, [`${selectedSite.id}:${role.key}`]: v }))}>
-                                  <SelectTrigger className="h-[32px] text-[12px] border-[#E5E4E0]">
+                                  <SelectTrigger className="h-[32px] text-[12px] border-[#DDDDDD]">
                                     <SelectValue placeholder="Select user..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -365,7 +365,7 @@ export default function Sites() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button size="sm" disabled={busy || !pendingAssign[`${selectedSite.id}:${role.key}`]} className="w-full text-[12px] h-[32px] bg-[#D4A017] hover:bg-[#A67C0A] text-white"
+                                <Button size="sm" disabled={busy || !pendingAssign[`${selectedSite.id}:${role.key}`]} className="w-full text-[12px] h-[32px] bg-[#EDC817] hover:bg-[#D9B60F] text-black"
                                   onClick={async () => {
                                     const pid = pendingAssign[`${selectedSite.id}:${role.key}`];
                                     if (!pid) return;
@@ -391,7 +391,7 @@ export default function Sites() {
                   <TabsContent value="approval" className="mt-4">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[16px] font-semibold text-[#1A1A1A]">Approval Chain Configuration</h3>
+                        <h3 className="text-[16px] font-semibold text-[#000000]">Approval Chain Configuration</h3>
                         <span className="text-[12px] text-[#525252]">{selectedSite.approvalStages} stages configured</span>
                       </div>
                       {[
@@ -404,10 +404,10 @@ export default function Sites() {
                       ].map((stage) => {
                         const enabled = stage.always || (stage.toggle === "hod" ? selectedSite.hodEnabled : false);
                         return (
-                          <div key={stage.n} className={cn("flex items-center gap-4 rounded-lg p-4 border", enabled ? "bg-[#FAFAF8] border-[#E5E4E0]" : "bg-white border-dashed border-[#E5E4E0] opacity-60")}>
-                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-white text-[13px] font-bold shrink-0", enabled ? "bg-[#D4A017]" : "bg-[#C4C3BF]")}>{stage.n}</div>
+                          <div key={stage.n} className={cn("flex items-center gap-4 rounded-lg p-4 border", enabled ? "bg-[#FAFAFA] border-[#DDDDDD]" : "bg-white border-dashed border-[#DDDDDD] opacity-60")}>
+                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-black text-[13px] font-bold shrink-0", enabled ? "bg-[#EDC817]" : "bg-[#C4C4C4]")}>{stage.n}</div>
                             <div className="flex-1">
-                              <div className="text-[14px] font-semibold text-[#1A1A1A]">{stage.name}</div>
+                              <div className="text-[14px] font-semibold text-[#000000]">{stage.name}</div>
                               <div className="text-[12px] text-[#525252]">{stage.dept}</div>
                             </div>
                             {stage.always ? (
@@ -422,10 +422,10 @@ export default function Sites() {
                           </div>
                         );
                       })}
-                      <div className="flex items-center gap-4 rounded-lg p-4 border bg-[#FAFAF8] border-[#E5E4E0] mt-2">
-                        <div className="w-8 h-8 rounded-full bg-[#1A1A1A] flex items-center justify-center text-[#D4A017] text-[13px] font-bold shrink-0">GM</div>
+                      <div className="flex items-center gap-4 rounded-lg p-4 border bg-[#FAFAFA] border-[#DDDDDD] mt-2">
+                        <div className="w-8 h-8 rounded-full bg-[#000000] flex items-center justify-center text-[#8C7600] text-[13px] font-bold shrink-0">GM</div>
                         <div className="flex-1">
-                          <div className="text-[14px] font-semibold text-[#1A1A1A]">Site GM Approval (Transfers)</div>
+                          <div className="text-[14px] font-semibold text-[#000000]">Site GM Approval (Transfers)</div>
                           <div className="text-[12px] text-[#525252]">Required before HR finalises a transfer at this site</div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -440,18 +440,18 @@ export default function Sites() {
                   {/* Statistics Tab */}
                   <TabsContent value="statistics" className="mt-4 space-y-4">
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
+                      <div className="bg-white rounded-lg border border-[#DDDDDD] p-4">
                         <h4 className="text-[13px] font-semibold text-[#525252] mb-3">Employees by Department</h4>
                         <ResponsiveContainer width="100%" height={180}>
                           <BarChart data={selectedSite.deptData.map((d) => ({ name: d.name, count: d.value }))} layout="vertical">
                             <XAxis type="number" hide />
                             <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11, fill: "#525252" }} axisLine={false} tickLine={false} />
                             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
-                            <Bar dataKey="count" fill="#D4A017" radius={[0, 4, 4, 0]} />
+                            <Bar dataKey="count" fill="#EDC817" radius={[0, 4, 4, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
+                      <div className="bg-white rounded-lg border border-[#DDDDDD] p-4">
                         <h4 className="text-[13px] font-semibold text-[#525252] mb-3">Gender Distribution</h4>
                         <ResponsiveContainer width="100%" height={180}>
                           <PieChart>
@@ -464,7 +464,7 @@ export default function Sites() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="bg-white rounded-lg border border-[#E5E4E0] p-4">
+                      <div className="bg-white rounded-lg border border-[#DDDDDD] p-4">
                         <h4 className="text-[13px] font-semibold text-[#525252] mb-3">Employee Status</h4>
                         <ResponsiveContainer width="100%" height={180}>
                           <BarChart data={selectedSite.statusData.map((d) => ({ name: d.name, count: d.value }))}>
@@ -473,7 +473,7 @@ export default function Sites() {
                             <Tooltip contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                               {selectedSite.statusData.map((entry, index) => (
-                                <Cell key={index} fill={{ Active: "#1B7A43", Onboarding: "#C27A06", Offboarding: "#B91C1C", Transferred: "#1E6BA3", Terminated: "#737373" }[entry.name] ?? "#D4A017"} />
+                                <Cell key={index} fill={{ Active: "#1B7A43", Onboarding: "#C27A06", Offboarding: "#B91C1C", Transferred: "#1E6BA3", Terminated: "#6B6B6B" }[entry.name] ?? "#EDC817"} />
                               ))}
                             </Bar>
                           </BarChart>
@@ -481,21 +481,21 @@ export default function Sites() {
                       </div>
                     </div>
                     <div className="grid grid-cols-4 gap-4">
-                      <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#D4A017]">
+                      <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#EDC817]">
                         <div className="text-[12px] text-[#525252] uppercase tracking-wider">Avg Onboarding</div>
-                        <div className="text-[20px] font-bold text-[#1A1A1A] mt-1">8.5 days</div>
+                        <div className="text-[20px] font-bold text-[#000000] mt-1">8.5 days</div>
                       </div>
-                      <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#1E6BA3]">
+                      <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#1E6BA3]">
                         <div className="text-[12px] text-[#525252] uppercase tracking-wider">Avg Offboarding</div>
-                        <div className="text-[20px] font-bold text-[#1A1A1A] mt-1">12.3 days</div>
+                        <div className="text-[20px] font-bold text-[#000000] mt-1">12.3 days</div>
                       </div>
-                      <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#1B7A43]">
+                      <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#1B7A43]">
                         <div className="text-[12px] text-[#525252] uppercase tracking-wider">Transfers In</div>
-                        <div className="text-[20px] font-bold text-[#1A1A1A] mt-1">3 this month</div>
+                        <div className="text-[20px] font-bold text-[#000000] mt-1">3 this month</div>
                       </div>
-                      <div className="bg-[#FAFAF8] rounded-lg p-4 border-l-[3px] border-[#C27A06]">
+                      <div className="bg-[#FAFAFA] rounded-lg p-4 border-l-[3px] border-[#C27A06]">
                         <div className="text-[12px] text-[#525252] uppercase tracking-wider">Transfers Out</div>
-                        <div className="text-[20px] font-bold text-[#1A1A1A] mt-1">1 this month</div>
+                        <div className="text-[20px] font-bold text-[#000000] mt-1">1 this month</div>
                       </div>
                     </div>
                   </TabsContent>
@@ -509,27 +509,27 @@ export default function Sites() {
       {/* Add Site Modal */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-[640px] p-0 gap-0">
-          <DialogHeader className="px-6 py-4 border-b border-[#E5E4E0]">
+          <DialogHeader className="px-6 py-4 border-b border-[#DDDDDD]">
             <DialogTitle className="text-[20px] font-semibold">Add New Site</DialogTitle>
           </DialogHeader>
           <div className="px-6 py-5 space-y-4">
             <div>
               <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Name <span className="text-[#B91C1C]">*</span></label>
-              <Input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} placeholder="e.g. Gwanda Operations" className="h-[40px] border-[#E5E4E0] text-[13px]" />
+              <Input value={newSiteName} onChange={(e) => setNewSiteName(e.target.value)} placeholder="e.g. Gwanda Operations" className="h-[40px] border-[#DDDDDD] text-[13px]" />
             </div>
             <div>
               <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Location</label>
-              <Input value={newSiteLocation} onChange={(e) => setNewSiteLocation(e.target.value)} placeholder="e.g. Matabeleland South" className="h-[40px] border-[#E5E4E0] text-[13px]" />
+              <Input value={newSiteLocation} onChange={(e) => setNewSiteLocation(e.target.value)} placeholder="e.g. Matabeleland South" className="h-[40px] border-[#DDDDDD] text-[13px]" />
             </div>
             <div>
               <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Full Address</label>
-              <Textarea value={newSiteAddress} onChange={(e) => setNewSiteAddress(e.target.value)} placeholder="Full street address..." className="min-h-[60px] border-[#E5E4E0] text-[13px]" />
+              <Textarea value={newSiteAddress} onChange={(e) => setNewSiteAddress(e.target.value)} placeholder="Full street address..." className="min-h-[60px] border-[#DDDDDD] text-[13px]" />
             </div>
             <div className="grid grid-cols-2 gap-4">
 
               <div>
                 <label className="text-[13px] font-medium text-[#525252] block mb-1.5">Site Code (auto)</label>
-                <Input value={newSiteName ? newSiteName.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) : ""} readOnly className="h-[40px] border-[#E5E4E0] text-[13px] bg-[#FAFAF8] text-[#9C9C9C]" />
+                <Input value={newSiteName ? newSiteName.replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) : ""} readOnly className="h-[40px] border-[#DDDDDD] text-[13px] bg-[#FAFAFA] text-[#9C9C9C]" />
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -542,9 +542,9 @@ export default function Sites() {
 
             </div>
           </div>
-          <div className="px-6 py-4 border-t border-[#E5E4E0] flex justify-end gap-3">
+          <div className="px-6 py-4 border-t border-[#DDDDDD] flex justify-end gap-3">
             <Button variant="outline" onClick={() => setAddOpen(false)} className="h-[40px] text-[13px]">Cancel</Button>
-            <Button onClick={handleAddSite} className="h-[40px] bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]">Create Site</Button>
+            <Button onClick={handleAddSite} className="h-[40px] bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">Create Site</Button>
           </div>
         </DialogContent>
       </Dialog>

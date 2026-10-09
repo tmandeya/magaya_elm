@@ -28,12 +28,12 @@ function LoadingFallback() {
       justifyContent: "center",
       height: "100vh",
       fontFamily: "'Plus Jakarta Sans', sans-serif",
-      background: "#f4f3ef"
+      background: "#F9F9F9"
     }}>
       <div style={{
         width: 32, height: 32,
-        border: "3px solid #e5e4e0",
-        borderTopColor: "#d4a017",
+        border: "3px solid #DDDDDD",
+        borderTopColor: "#EDC817",
         borderRadius: "50%",
         animation: "spin 1s linear infinite"
       }} />

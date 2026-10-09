@@ -52,7 +52,7 @@ export default function Login() {
           </svg>
         </div>
         <div className="relative z-10 flex flex-col items-center text-center px-12 animate-fade-in-up">
-          <img src="/magaya_logo.png" alt="Magaya Mining" className="w-[200px] h-auto mb-8" />
+          <img src="/magaya_logo_white.png" alt="Magaya Mining" className="w-[176px] h-auto mb-8 drop-shadow-[0_2px_8px_rgba(0,0,0,0.45)]" />
           <h2 className="text-[22px] font-semibold text-white mb-2">Employee Lifecycle Management System</h2>
           <p className="text-[14px] text-white/60 mb-12">Streamlining workforce operations across all Magaya sites</p>
           <div className="flex flex-col gap-5 text-left">

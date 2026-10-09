@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/table";
 import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
 import { useOnboarding, type LiveOnboardingWorkflow, type LiveTask, type OnboardingCandidate } from "@/hooks/useOnboarding";
+import OnboardingDocument from "@/components/OnboardingDocument";
 import {
   Plus,
   Search,
@@ -358,6 +359,7 @@ function OnboardingDetail({
   );
   const stages = workflow.stages;
   const activityLog = workflow.activityLog;
+  const [docOpen, setDocOpen] = useState(false);
   const [signOffStage, setSignOffStage] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -415,6 +417,19 @@ function OnboardingDetail({
       {actionError && (
         <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{actionError}</div>
       )}
+      {workflow.status === "Completed" ? (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#1B7A43]/30 bg-[#1B7A43]/5 flex items-center justify-between gap-3">
+          <span className="text-[13px] text-[#1B7A43] font-medium">Onboarding complete — all departments and HR have signed off.</span>
+          <Button size="sm" onClick={() => setDocOpen(true)} className="bg-[#1B7A43] hover:bg-[#14603a] text-white text-[12px] h-8 shrink-0">
+            Onboarding Document
+          </Button>
+        </div>
+      ) : (
+        <div className="mb-4 px-4 py-3 rounded-[10px] border border-[#1E6BA3]/25 bg-[#1E6BA3]/5 text-[12px] text-[#1E6BA3]">
+          HR, Security, IT and Administration can complete their stages in any order. Each department signs off by completing its own stage; HR Completion opens once all four are done.
+        </div>
+      )}
+      <OnboardingDocument workflow={workflow} open={docOpen} onClose={() => setDocOpen(false)} />
 
       {/* Header Card */}
       <div className="bg-white rounded-[10px] border border-[#E5E4E0] p-5 mb-5">
@@ -638,12 +653,13 @@ function NewOnboardingWizard({
   hardwareOptions: string[];
   softwareOptions: string[];
   clearanceOptions: string[];
-  onSubmit: (input: { employeeId: string; notes?: string; hardware: string[]; software: string[]; clearanceLevel: string; vehicleCard: boolean; parking: boolean; adminNotes?: string }) => Promise<{ id: string | null; error: string | null }>;
+  onSubmit: (employeeIds: string[], input: { notes?: string; hardware: string[]; software: string[]; clearanceLevel: string; vehicleCard: boolean; parking: boolean; adminNotes?: string }) => Promise<{ started: string[]; failed: { employeeId: string; error: string }[] }>;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("");
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [empSearch, setEmpSearch] = useState("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [expectedCompletion, setExpectedCompletion] = useState("");
   const [notes, setNotes] = useState("");
@@ -668,7 +684,8 @@ function NewOnboardingWizard({
 
   const resetForm = () => {
     setStep(0);
-    setSelectedEmployee("");
+    setSelectedEmployees([]);
+    setEmpSearch("");
     setStartDate(new Date().toISOString().split("T")[0]);
     setExpectedCompletion("");
     setNotes("");
@@ -690,7 +707,13 @@ function NewOnboardingWizard({
     onClose();
   };
 
-  const selectedEmpData = candidates.find((e) => e.id === selectedEmployee);
+  const selectedEmpData = candidates.filter((e) => selectedEmployees.includes(e.id));
+  const filteredCandidates = candidates.filter((c) => {
+    const q = empSearch.trim().toLowerCase();
+    return !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q) || c.site.toLowerCase().includes(q);
+  });
+  const toggleEmployee = (id: string) =>
+    setSelectedEmployees((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const toggleHardware = (item: string) => {
     setSelectedHardware((prev) =>
@@ -705,7 +728,7 @@ function NewOnboardingWizard({
   };
 
   const canProceed = () => {
-    if (step === 0) return selectedEmployee && startDate;
+    if (step === 0) return selectedEmployees.length > 0 && !!startDate;
     if (step === 4) return confirmed;
     return true;
   };
@@ -724,45 +747,44 @@ function NewOnboardingWizard({
           {step === 0 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
               <div>
-                <label className="text-[13px] font-medium text-[#525252] mb-1.5 block">
-                  Select Employee <span className="text-[#B91C1C]">*</span>
-                </label>
-                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                  <SelectTrigger className="h-10 text-[13px]">
-                    <SelectValue placeholder="Choose a pending employee..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id} className="text-[13px]">
-                        {emp.name} ({emp.code}) — {emp.site}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {candidates.length === 0 && (
-                  <p className="text-[12px] text-[#9C9C9C] mt-1.5">No employees are awaiting onboarding. Create the employee in Employee Master Data with status "Onboarding" first.</p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[13px] font-medium text-[#525252]">
+                    Select Employees <span className="text-[#B91C1C]">*</span>
+                  </label>
+                  {candidates.length > 0 && (
+                    <div className="flex items-center gap-3 text-[12px]">
+                      <span className="text-[#737373]">{selectedEmployees.length} selected</span>
+                      <button type="button" className="text-[#A67C0A] font-medium hover:underline"
+                        onClick={() => setSelectedEmployees(Array.from(new Set([...selectedEmployees, ...filteredCandidates.map((c) => c.id)])))}>Select all{empSearch ? " shown" : ""}</button>
+                      {selectedEmployees.length > 0 && (
+                        <button type="button" className="text-[#737373] hover:underline" onClick={() => setSelectedEmployees([])}>Clear</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {candidates.length === 0 ? (
+                  <p className="text-[12px] text-[#9C9C9C]">No employees are awaiting onboarding. Create the employee in Employee Master Data with status "Onboarding" first.</p>
+                ) : (
+                  <>
+                    <Input value={empSearch} onChange={(e) => setEmpSearch(e.target.value)} placeholder="Search by name, ID or site..." className="h-9 text-[13px] mb-2" />
+                    <div className="border border-[#E5E4E0] rounded-lg max-h-[220px] overflow-y-auto divide-y divide-[#F0EFEB]">
+                      {filteredCandidates.map((emp) => (
+                        <label key={emp.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-[#FAFAF8]">
+                          <Checkbox checked={selectedEmployees.includes(emp.id)} onCheckedChange={() => toggleEmployee(emp.id)} />
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-medium text-[#1A1A1A] truncate">{emp.name} <span className="text-[#9C9C9C] font-normal">({emp.code})</span></div>
+                            <div className="text-[11px] text-[#737373] truncate">{emp.site} · {emp.department}</div>
+                          </div>
+                        </label>
+                      ))}
+                      {filteredCandidates.length === 0 && <div className="px-3 py-4 text-center text-[12px] text-[#9C9C9C]">No matches</div>}
+                    </div>
+                    {selectedEmployees.length > 1 && (
+                      <p className="text-[11px] text-[#737373] mt-1.5">The same start date, security, IT and admin requirements apply to all {selectedEmployees.length} employees. Each gets their own onboarding workflow.</p>
+                    )}
+                  </>
                 )}
               </div>
-
-              {selectedEmpData && (
-                <div className="p-3 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#D4A017] flex items-center justify-center text-white text-[13px] font-bold">
-                    {selectedEmpData.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </div>
-                  <div>
-                    <div className="text-[13px] font-medium text-[#1A1A1A]">
-                      {selectedEmpData.name}
-                    </div>
-                    <div className="text-[11px] text-[#737373]">
-                      {selectedEmpData.code} · {selectedEmpData.site} ·{" "}
-                      {selectedEmpData.department}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -861,8 +883,9 @@ function NewOnboardingWizard({
 
               <div>
                 <label className="text-[13px] font-medium text-[#525252] mb-2 block">
-                  Hardware Required
+                  Devices Required
                 </label>
+                <p className="text-[11px] text-[#9C9C9C] -mt-1 mb-2">Choose the device type. IT selects the specific model when allocating.</p>
                 <div className="flex flex-wrap gap-2">
                   {hardwareOptions.map((item) => (
                     <button
@@ -885,6 +908,7 @@ function NewOnboardingWizard({
                 <label className="text-[13px] font-medium text-[#525252] mb-2 block">
                   Software Required
                 </label>
+                <p className="text-[11px] text-[#9C9C9C] -mt-1 mb-2">This list is maintained by IT in Settings → Dropdown Config → Software Catalog.</p>
                 <div className="flex flex-wrap gap-2">
                   {softwareOptions.map((item) => (
                     <button
@@ -941,35 +965,20 @@ function NewOnboardingWizard({
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
               <h3 className="text-[14px] font-semibold text-[#1A1A1A]">Review & Submit</h3>
 
-              {selectedEmpData && (
-                <div className="p-4 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg space-y-2">
-                  <div className="text-[13px] font-medium text-[#1A1A1A] mb-2">
-                    Employee Summary
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Name</span>
-                    <span className="font-medium text-[#1A1A1A]">{selectedEmpData.name}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Code</span>
-                    <span className="font-medium text-[#1A1A1A]">{selectedEmpData.code}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Site</span>
-                    <span className="font-medium text-[#1A1A1A]">{selectedEmpData.site}</span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Department</span>
-                    <span className="font-medium text-[#1A1A1A]">
-                      {selectedEmpData.department}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-[#737373]">Start Date</span>
-                    <span className="font-medium text-[#1A1A1A]">{startDate}</span>
-                  </div>
+              <div className="p-4 bg-[#FAFAF8] border border-[#E5E4E0] rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[13px] font-medium text-[#1A1A1A]">{selectedEmpData.length} employee{selectedEmpData.length === 1 ? "" : "s"} to onboard</span>
+                  <span className="text-[12px] text-[#737373]">Start date: <strong className="text-[#1A1A1A]">{startDate}</strong></span>
                 </div>
-              )}
+                <div className="max-h-[140px] overflow-y-auto space-y-1">
+                  {selectedEmpData.map((e) => (
+                    <div key={e.id} className="flex justify-between text-[12px]">
+                      <span className="text-[#1A1A1A]">{e.name} <span className="text-[#9C9C9C]">({e.code})</span></span>
+                      <span className="text-[#737373]">{e.site} · {e.department}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 border border-[#E5E4E0] rounded-lg">
@@ -986,7 +995,7 @@ function NewOnboardingWizard({
                   <div className="text-[11px] font-semibold text-[#7C3AED] mb-1.5">IT</div>
                   <div className="text-[11px] text-[#525252] space-y-0.5">
                     <div>M365: {m365Needed ? "Yes" : "No"}</div>
-                    <div>Hardware: {selectedHardware.join(", ") || "None"}</div>
+                    <div>Devices: {selectedHardware.join(", ") || "None"}</div>
                     <div>Software: {selectedSoftware.join(", ") || "None"}</div>
                   </div>
                 </div>
@@ -1033,8 +1042,7 @@ function NewOnboardingWizard({
                 setSubmitting(true);
                 setSubmitError(null);
                 const adminNotes = `Parking: ${parkingNeeded ? "yes" : "no"}; Locker: ${lockerNeeded ? "yes" : "no"}; Induction: ${inductionNeeded ? "required" : "not required"}; M365 account: ${m365Needed ? "required" : "not required"}; ID card: ${needsIdCard ? "yes" : "no"}`;
-                const res = await onSubmit({
-                  employeeId: selectedEmployee,
+                const res = await onSubmit(selectedEmployees, {
                   notes: [notes, expectedCompletion ? `Expected completion: ${expectedCompletion}` : "", `Start date: ${startDate}`].filter(Boolean).join(" | "),
                   hardware: selectedHardware,
                   software: selectedSoftware,
@@ -1044,13 +1052,18 @@ function NewOnboardingWizard({
                   adminNotes,
                 });
                 setSubmitting(false);
-                if (res.error) { setSubmitError(res.error); return; }
+                if (res.failed.length > 0) {
+                  const nameOf = (id: string) => candidates.find((c) => c.id === id)?.name ?? id;
+                  setSubmitError(`${res.started.length} started. Failed: ` + res.failed.map((f) => `${nameOf(f.employeeId)} (${f.error})`).join("; "));
+                  setSelectedEmployees(res.failed.map((f) => f.employeeId));
+                  return;
+                }
                 handleClose();
               }}
               disabled={!canProceed() || submitting}
               className="bg-[#D4A017] hover:bg-[#A67C0A] text-white text-[13px]"
             >
-              {submitting ? "Initiating..." : "Submit & Initiate"}
+              {submitting ? "Initiating..." : selectedEmployees.length > 1 ? `Initiate ${selectedEmployees.length} Onboardings` : "Submit & Initiate"}
             </Button>
           )}
         </DialogFooter>
@@ -1067,7 +1080,7 @@ export default function Onboarding() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, startOnboarding, setTaskStatus } = useOnboarding();
+  const { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, startOnboardingMany, setTaskStatus } = useOnboarding();
 
   if (loading) {
     return (
@@ -1118,9 +1131,9 @@ export default function Onboarding() {
         hardwareOptions={hardwareOptions}
         softwareOptions={softwareOptions}
         clearanceOptions={clearanceOptions}
-        onSubmit={async (input) => {
-          const res = await startOnboarding(input);
-          if (res.id) navigate(`/onboarding/${res.id}`);
+        onSubmit={async (employeeIds, input) => {
+          const res = await startOnboardingMany(employeeIds, input);
+          if (res.failed.length === 0 && res.started.length === 1) navigate(`/onboarding/${res.started[0]}`);
           return res;
         }}
       />

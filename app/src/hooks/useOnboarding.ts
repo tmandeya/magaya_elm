@@ -30,7 +30,17 @@ export interface LiveOnboardingStage extends OnboardingStage {
 export interface LiveOnboardingWorkflow extends OnboardingWorkflow {
   stages: LiveOnboardingStage[];
   employeeUuid: string;
+  doc: {
+    position: string | null;
+    employmentType: string | null;
+    workEmail: string | null;
+    startDate: string | null;
+    completedAt: string | null;
+  };
 }
+
+/** Device categories HR can request; IT chooses the actual model at allocation. */
+export const DEVICE_TYPES = ["Laptop", "Desktop", "Phone", "Tablet"];
 
 export interface OnboardingCandidate {
   id: string;
@@ -49,7 +59,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const WORKFLOW_SELECT = `
   id, workflow_type, status, notes, created_at, completed_at, initiated_by,
-  employees!workflows_employee_id_fkey ( id, employee_id, full_name, photo_url, sites(name), departments(name) ),
+  employees!workflows_employee_id_fkey ( id, employee_id, full_name, photo_url, position, occupation, employment_type, work_email, sites(name), departments(name) ),
   workflow_stages (
     id, stage_key, stage_label, stage_order, status, assigned_to_role,
     started_at, completed_at, completed_by, notes,
@@ -64,6 +74,8 @@ const WORKFLOW_SELECT = `
 function mapWorkflow(w: any, profileNames: Record<string, string>): LiveOnboardingWorkflow {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stages: LiveOnboardingStage[] = (w.workflow_stages ?? [])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((s: any) => s.status !== "skipped")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .sort((a: any, b: any) => a.stage_order - b.stage_order)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,7 +103,8 @@ function mapWorkflow(w: any, profileNames: Record<string, string>): LiveOnboardi
     }));
 
   const completedCount = stages.filter((s) => s.status === "completed").length;
-  const current = stages.find((s) => s.status === "in-progress");
+  const active = stages.filter((s) => s.status === "in-progress");
+  const currentLabel = active.length === 0 ? "Pending" : active.length <= 2 ? active.map((s) => s.name).join(" · ") : `${active.length} departments in progress`;
 
   const activityLog: ActivityLogEntry[] = [
     { type: "create", message: "Onboarding initiated", timestamp: w.created_at, user: profileNames[w.initiated_by] ?? "HR" },
@@ -120,12 +133,19 @@ function mapWorkflow(w: any, profileNames: Record<string, string>): LiveOnboardi
     employeeUuid: w.employees?.id ?? "",
     initiatedDate: (w.created_at ?? "").slice(0, 10),
     expectedCompletion: "",
-    currentStage: w.status === "completed" ? "Completed" : (current?.name ?? "Pending"),
+    currentStage: w.status === "completed" ? "Completed" : currentLabel,
     progress: stages.length ? Math.round((completedCount / stages.length) * 100) : 0,
     initiatedBy: profileNames[w.initiated_by] ?? "—",
     status: w.status === "completed" ? "Completed" : "In Progress",
     stages,
     activityLog,
+    doc: {
+      position: w.employees?.position ?? w.employees?.occupation ?? null,
+      employmentType: w.employees?.employment_type ?? null,
+      workEmail: w.employees?.work_email ?? null,
+      startDate: (String(w.notes ?? "").match(/Start date: (\d{4}-\d{2}-\d{2})/) ?? [])[1] ?? null,
+      completedAt: w.completed_at ?? null,
+    },
   };
 }
 
@@ -140,11 +160,10 @@ export function useOnboarding() {
 
   const refetch = useCallback(async () => {
     setError(null);
-    const [wfRes, profRes, candRes, hwRes, swRes, clRes] = await Promise.all([
+    const [wfRes, profRes, candRes, swRes, clRes] = await Promise.all([
       supabase.from("workflows").select(WORKFLOW_SELECT).eq("workflow_type", "onboarding").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
       supabase.from("employees").select("id, employee_id, full_name, status, sites(name), departments(name)").eq("status", "onboarding"),
-      supabase.from("hardware_catalog").select("make, model, category").eq("is_active", true).order("category"),
       supabase.from("software_catalog").select("name").eq("is_active", true).order("name"),
       supabase.from("clearance_levels").select("*"),
     ]);
@@ -163,8 +182,7 @@ export function useOnboarding() {
       .map((e: any) => ({ id: e.id, name: e.full_name, code: e.employee_id, site: e.sites?.name ?? "—", department: e.departments?.name ?? "—" }))
       .filter((c) => !inFlight.has(c.id)));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setHardwareOptions(((hwRes.data ?? []) as any[]).map((h) => `${h.make} ${h.model}`));
+    setHardwareOptions(DEVICE_TYPES);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setSoftwareOptions(((swRes.data ?? []) as any[]).map((s) => s.name));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,6 +227,30 @@ export function useOnboarding() {
     return { id: wfId, error: null };
   }, [refetch]);
 
+  const startOnboardingMany = useCallback(async (employeeIds: string[], input: {
+    notes?: string; hardware: string[]; software: string[]; clearanceLevel: string;
+    vehicleCard: boolean; parking: boolean; adminNotes?: string;
+  }): Promise<{ started: string[]; failed: { employeeId: string; error: string }[] }> => {
+    const started: string[] = [];
+    const failed: { employeeId: string; error: string }[] = [];
+    for (const employeeId of employeeIds) {
+      const { data, error: err } = await supabase.rpc("fn_start_workflow", {
+        p_type: "onboarding", p_employee_id: employeeId, p_notes: input.notes ?? null,
+      });
+      if (err) { failed.push({ employeeId, error: err.message }); continue; }
+      const wfId = data as string;
+      const { error: reqErr } = await supabase.rpc("fn_set_onboarding_requests", {
+        p_workflow_id: wfId, p_hardware: input.hardware, p_software: input.software,
+        p_clearance_level: input.clearanceLevel || null, p_vehicle_card: input.vehicleCard,
+        p_parking: input.parking, p_admin_notes: input.adminNotes ?? null,
+      });
+      if (reqErr) failed.push({ employeeId, error: "Started, but requests not attached: " + reqErr.message });
+      started.push(wfId);
+    }
+    await refetch();
+    return { started, failed };
+  }, [refetch]);
+
   const setTaskStatus = useCallback(async (taskId: string, status: LiveTask["dbStatus"], notes?: string): Promise<string | null> => {
     const { error: err } = await supabase.rpc("fn_set_task_status", {
       p_task_id: taskId,
@@ -220,5 +262,5 @@ export function useOnboarding() {
     return null;
   }, [refetch]);
 
-  return { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, refetch, startOnboarding, setTaskStatus };
+  return { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, refetch, startOnboarding, startOnboardingMany, setTaskStatus };
 }

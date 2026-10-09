@@ -110,14 +110,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Entra ID (Azure) OAuth. On return, detectSessionInUrl consumes the
     // tokens and onAuthStateChange loads the ELMS profile. Users without a
     // provisioned profile are signed out by the existing deny-by-default gate.
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "azure",
       options: {
         scopes: "openid profile email",
         redirectTo: window.location.origin,
+        skipBrowserRedirect: true,
       },
     });
-    return error ? error.message : null; // on success the browser redirects away
+    if (error || !data?.url) return error?.message ?? "Could not start Microsoft sign-in.";
+    // Pre-flight the authorize URL so a misconfigured provider shows a
+    // readable message here instead of dumping raw JSON in the browser.
+    try {
+      const probe = await fetch(data.url, { method: "GET", redirect: "manual" });
+      if (probe.status === 400 || probe.status === 404) {
+        return "Microsoft sign-in is not configured yet (Azure provider disabled in Supabase). Use email and password, or contact IT.";
+      }
+    } catch { /* opaque redirect or CORS = provider responded; proceed */ }
+    window.location.assign(data.url);
+    return null; // navigation takes over
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {

@@ -1,6 +1,6 @@
 // src/pages/Talent.tsx — Graduate Trainees & Attachment Students
 import { useEffect, useMemo, useState } from "react";
-import { GraduationCap, Users, ClipboardCheck, BookOpen, Plus, Upload, Search, Printer, FileText, Play, Square, RefreshCw, Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { GraduationCap, Users, ClipboardCheck, BookOpen, Plus, Upload, Download, Search, Printer, FileText, Play, Square, RefreshCw, Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { buildPaper, COGNITIVE_SECTIONS, FORM_CODES, SECTION_LABELS, type BankItem, type GenItem } from "@/lib/testGenerators";
 import { useTalent, loadReviews, addReview, STATUS_META, RISK_META, TYPE_LABEL, type Trainee, type TraineeStatus, type Schedule, type AttemptSummary, type Review } from "@/hooks/useTalent";
 import { CandidateReport, ScheduleReport } from "@/components/talent/AssessmentReports";
+import { parseIntake, type IntakeRow } from "@/lib/intakeImport";
 
 const EXAM_URL = `${window.location.origin}/#/exam`;
 const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -194,22 +195,90 @@ function AddPersonDialog({ t, open, onClose }: { t: T; open: boolean; onClose: (
 }
 
 function ImportDialog({ t, open, onClose }: { t: T; open: boolean; onClose: () => void }) {
+  const [mode, setMode] = useState<"upload" | "paste">("upload");
   const [type, setType] = useState<"graduate_trainee" | "attachment_student">("attachment_student");
   const [text, setText] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
-  const parsed = useMemo(() => text.split(/\r?\n/).map((l) => l.split(/\t|,/).map((c) => c.trim())).filter((c) => c[0] && c[1] && !/^first/i.test(c[0]))
+  const [fileName, setFileName] = useState<string | null>(null); const [rows, setRows] = useState<IntakeRow[]>([]); const [drag, setDrag] = useState(false);
+  const [done, setDone] = useState<number | null>(null);
+  const reset = () => { setText(""); setRows([]); setFileName(null); setErr(null); setDone(null); };
+  const close = () => { reset(); onClose(); };
+  const existing = useMemo(() => new Set(t.trainees.map((p) => (p.email ?? "").toLowerCase()).filter(Boolean)), [t.trainees]);
+  const readFile = async (f: File | undefined) => {
+    if (!f) return; setErr(null); setDone(null);
+    if (!/\.(xlsx|xls|csv)$/i.test(f.name)) { setErr("Please choose an Excel (.xlsx) or CSV file."); return; }
+    const res = parseIntake(await f.arrayBuffer(), { defaultType: null, sites: t.sites, existingEmails: existing });
+    setFileName(f.name); setRows(res.rows); if (res.sheetError) setErr(res.sheetError);
+  };
+  const pasted = useMemo(() => text.split(/\r?\n/).map((l) => l.split(/\t|,/).map((c) => c.trim())).filter((c) => c[0] && c[1] && !/^first/i.test(c[0]))
     .map((c) => ({ first_name: c[0], surname: c[1], email: c[2] || "", phone: c[3] || "", institution: c[4] || "", programme: c[5] || "", trainee_type: type })), [text, type]);
-  const save = async () => { setBusy(true); setErr(null); const e = await t.addTrainees(parsed as Partial<Trainee>[]); setBusy(false); if (e) setErr(e); else { setText(""); onClose(); } };
+  const ready = rows.filter((r) => !r.errors.length && !r.skip);
+  const errored = rows.filter((r) => r.errors.length);
+  const skipped = rows.filter((r) => r.skip === "duplicate");
+  const importUpload = async () => {
+    setBusy(true); setErr(null);
+    const e = await t.addTrainees(ready.map((r) => ({ trainee_type: r.trainee_type!, first_name: r.first_name, surname: r.surname, email: r.email, phone: r.phone, gender: r.gender, institution: r.institution, programme: r.programme, year_of_study: r.year_of_study, site_id: r.site_id, notes: r.notes || null } as Partial<Trainee>)));
+    setBusy(false); if (e) setErr(e); else { setDone(ready.length); setRows([]); setFileName(null); }
+  };
+  const importPaste = async () => { setBusy(true); setErr(null); const e = await t.addTrainees(pasted as Partial<Trainee>[]); setBusy(false); if (e) setErr(e); else { setDone(pasted.length); setText(""); } };
+
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}><DialogContent className="max-w-[720px]" aria-describedby={undefined}>
+    <Dialog open={open} onOpenChange={(o) => !o && close()}><DialogContent className="max-w-[820px] max-h-[92vh] overflow-y-auto" aria-describedby={undefined}>
       <DialogHeader><DialogTitle>Bulk import an intake</DialogTitle></DialogHeader>
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">{(["attachment_student", "graduate_trainee"] as const).map((x) => <button key={x} onClick={() => setType(x)} className={cn("h-10 rounded-[6px] border-2 text-[13px] font-semibold", type === x ? "border-black bg-[#EDC817]" : "border-[#DDDDDD]")}>{TYPE_LABEL[x]}s</button>)}</div>
-        <p className="text-[12px] text-[#525252]">Copy rows from Excel and paste below. Column order: <strong>First name, Surname, Email, Phone, Institution, Field of study</strong> (only the first two are required; a header row is skipped automatically).</p>
-        <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={9} placeholder={"Tendai\tMoyo\ttendai@gmail.com\t0771234567\tNUST\tBSc Mining Engineering"} className="font-mono text-[12px]" />
-        {parsed.length > 0 && <div className="border border-[#DDDDDD] rounded-[6px] max-h-[160px] overflow-y-auto text-[12px]"><table className="w-full"><tbody>{parsed.slice(0, 50).map((p, i) => <tr key={i} className="border-b border-[#EEEEEE]"><td className="px-2 py-1 text-[#9C9C9C]">{i + 1}</td><td className="px-2 font-semibold">{p.first_name} {p.surname}</td><td className="px-2 text-[#6B6B6B]">{p.email}</td><td className="px-2 text-[#6B6B6B]">{p.institution}</td><td className="px-2 text-[#6B6B6B]">{p.programme}</td></tr>)}</tbody></table></div>}
-        {err && <p className="text-[12px] text-[#B91C1C]">{err}</p>}
-      </div>
-      <DialogFooter><Button variant="outline" onClick={onClose}>Cancel</Button><Button disabled={busy || parsed.length === 0} onClick={() => void save()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black">{busy ? "Importing…" : `Import ${parsed.length} ${parsed.length === 1 ? "person" : "people"}`}</Button></DialogFooter>
+      <div className="flex gap-1 border-b border-[#DDDDDD]">{([["upload", "Upload Excel"], ["paste", "Paste rows"]] as const).map(([k, l]) => <button key={k} onClick={() => { setMode(k); setErr(null); }} className={cn("px-3 py-2 text-[13px] border-b-[3px] -mb-px", mode === k ? "border-[#EDC817] font-semibold" : "border-transparent text-[#6B6B6B]")}>{l}</button>)}</div>
+
+      {done !== null && <div className="flex items-center gap-2 px-4 py-3 rounded-[6px] bg-[#E8F5EC] text-[#1B7A43] text-[13px] font-semibold"><CheckCircle2 className="w-4 h-4" />{done} {done === 1 ? "person" : "people"} imported with status Pending.</div>}
+
+      {mode === "upload" ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-[6px] bg-[#FDF8DC] border-l-4 border-[#EDC817]">
+            <div className="flex-1 text-[12px] text-black"><strong>Step 1:</strong> download the template, fill in one person per row, and save it. Programme, Gender and Site have dropdowns. <strong>Step 2:</strong> upload it below; nothing is saved until you confirm.</div>
+            <a href="/templates/Talent_Intake_Template.xlsx" download className="shrink-0 h-9 px-3 rounded-md bg-black text-white text-[12px] font-semibold flex items-center gap-1.5"><Download className="w-3.5 h-3.5" />Download template</a>
+          </div>
+          <label onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); void readFile(e.dataTransfer.files?.[0]); }}
+            className={cn("flex flex-col items-center justify-center gap-1 border-2 border-dashed rounded-[6px] py-7 cursor-pointer transition-colors", drag ? "border-[#EDC817] bg-[#FDF8DC]" : "border-[#C4C4C4] hover:border-[#EDC817]")}>
+            <Upload className="w-7 h-7 text-[#9C9C9C]" />
+            <span className="text-[14px] font-semibold">{fileName ?? "Drop the completed file here, or click to choose"}</span>
+            <span className="text-[11px] text-[#9C9C9C]">.xlsx or .csv · up to 500 people</span>
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { void readFile(e.target.files?.[0]); e.target.value = ""; }} />
+          </label>
+          {rows.length > 0 && <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-[6px] p-3 bg-[#E8F5EC]"><div className="text-[22px] font-bold text-[#1B7A43]">{ready.length}</div><div className="text-[11px] text-[#1B7A43] font-semibold">Ready to import</div></div>
+              <div className={cn("rounded-[6px] p-3", errored.length ? "bg-[#FEF2F2]" : "bg-[#F5F5F5]")}><div className={cn("text-[22px] font-bold", errored.length ? "text-[#B91C1C]" : "text-[#9C9C9C]")}>{errored.length}</div><div className="text-[11px] font-semibold text-[#6B6B6B]">Need fixing (not imported)</div></div>
+              <div className="rounded-[6px] p-3 bg-[#F5F5F5]"><div className="text-[22px] font-bold text-[#6B6B6B]">{skipped.length}</div><div className="text-[11px] font-semibold text-[#6B6B6B]">Already in ELMS (skipped)</div></div>
+            </div>
+            <div className="border border-[#DDDDDD] rounded-[6px] max-h-[300px] overflow-y-auto">
+              <table className="w-full text-[12px]">
+                <thead className="bg-[#FAFAFA] sticky top-0 text-[10px] uppercase tracking-[0.05em] text-[#6B6B6B]"><tr>{["Row", "Name", "Programme", "Institution / field", "Site", "Check"].map((h) => <th key={h} className="text-left px-2 py-1.5 font-semibold">{h}</th>)}</tr></thead>
+                <tbody>{[...errored, ...rows.filter((r) => !r.errors.length)].filter((r) => r.skip !== "example").map((r) => (
+                  <tr key={r.line} className={cn("border-t border-[#EEEEEE]", r.errors.length ? "bg-[#FEF2F2]" : r.skip ? "bg-[#FAFAFA] text-[#9C9C9C]" : "")}>
+                    <td className="px-2 py-1.5 text-[#9C9C9C]">{r.line}</td>
+                    <td className="px-2 font-semibold">{r.first_name} {r.surname}<div className="font-normal text-[10px] text-[#9C9C9C]">{r.email}</div></td>
+                    <td className="px-2">{r.trainee_type === "graduate_trainee" ? "GT" : r.trainee_type === "attachment_student" ? "Student" : "—"}</td>
+                    <td className="px-2">{r.institution}<div className="text-[10px] text-[#9C9C9C]">{r.programme}</div></td>
+                    <td className="px-2">{r.site_id ? r.site_name : "—"}</td>
+                    <td className="px-2">{r.errors.length ? <span className="text-[#B91C1C] font-semibold">{r.errors.join("; ")}</span> : r.warnings.length ? <span className="text-[#C27A06]">{r.warnings.join("; ")}</span> : <span className="text-[#1B7A43]">OK</span>}</td>
+                  </tr>))}</tbody>
+              </table>
+            </div>
+            {errored.length > 0 && <p className="text-[12px] text-[#525252]">Fix the red rows in your file and upload it again, or import the {ready.length} ready rows now and add the rest later. People already imported are skipped automatically, so re-uploading the same file is safe.</p>}
+          </>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">{(["attachment_student", "graduate_trainee"] as const).map((x) => <button key={x} onClick={() => setType(x)} className={cn("h-10 rounded-[6px] border-2 text-[13px] font-semibold", type === x ? "border-black bg-[#EDC817]" : "border-[#DDDDDD]")}>{TYPE_LABEL[x]}s</button>)}</div>
+          <p className="text-[12px] text-[#525252]">Paste rows copied from Excel. Column order: <strong>First name, Surname, Email, Phone, Institution, Field of study</strong>. For anything more, use the template upload.</p>
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={8} placeholder={"Tendai\tMoyo\ttendai@gmail.com\t0771234567\tNUST\tBSc Mining Engineering"} className="font-mono text-[12px]" />
+          {pasted.length > 0 && <p className="text-[12px] text-[#6B6B6B]">{pasted.length} {pasted.length === 1 ? "row" : "rows"} recognised.</p>}
+        </div>
+      )}
+      {err && <p className="text-[12px] text-[#B91C1C]">{err}</p>}
+      <DialogFooter>
+        <Button variant="outline" onClick={close}>{done !== null ? "Done" : "Cancel"}</Button>
+        {mode === "upload"
+          ? <Button disabled={busy || ready.length === 0} onClick={() => void importUpload()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black">{busy ? "Importing…" : `Import ${ready.length} ${ready.length === 1 ? "person" : "people"}`}</Button>
+          : <Button disabled={busy || pasted.length === 0} onClick={() => void importPaste()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black">{busy ? "Importing…" : `Import ${pasted.length}`}</Button>}
+      </DialogFooter>
     </DialogContent></Dialog>
   );
 }

@@ -6,6 +6,21 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Capture an OAuth error returned by Microsoft/Supabase BEFORE the client and the
+// hash router consume the URL, so the login page can show the real reason.
+export const OAUTH_ERROR_KEY = 'elms_oauth_error';
+(() => {
+  try {
+    const raw = `${window.location.search.slice(1)}&${window.location.hash.replace(/^#\/?/, '').replace(/^[^?]*\?/, '')}`;
+    const p = new URLSearchParams(raw);
+    const desc = p.get('error_description') || p.get('error');
+    if (desc) {
+      sessionStorage.setItem(OAUTH_ERROR_KEY, `${desc.replace(/\+/g, ' ')}${p.get('error_code') ? ` (${p.get('error_code')})` : ''}`);
+      window.history.replaceState(null, '', `${window.location.pathname}#/login`);
+    }
+  } catch { /* never block app start */ }
+})();
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,

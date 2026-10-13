@@ -1,3 +1,4 @@
+import { OAUTH_ERROR_KEY } from "@/lib/supabase";
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Lock, Eye, EyeOff, ArrowRight, CheckCircle } from "lucide-react";
@@ -13,7 +14,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(() => {
+    const e = sessionStorage.getItem(OAUTH_ERROR_KEY);
+    if (!e) return null;
+    sessionStorage.removeItem(OAUTH_ERROR_KEY);
+    return `Microsoft sign-in did not complete: ${e}. Please send this message to IT.`;
+  });
   const [shakeField, setShakeField] = useState<string | null>(null);
 
   const shake = useCallback((field: string) => { setShakeField(field); setTimeout(() => setShakeField(null), 300); }, []);

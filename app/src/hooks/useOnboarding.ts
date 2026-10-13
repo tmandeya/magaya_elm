@@ -262,5 +262,5 @@ export function useOnboarding() {
     return null;
   }, [refetch]);
 
-  return { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, refetch, startOnboarding, startOnboardingMany, setTaskStatus };
+  return { workflows, candidates, awaiting: candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, refetch, startOnboarding, startOnboardingMany, setTaskStatus };
 }

@@ -143,6 +143,7 @@ function mapWorkflow(w: any, profileNames: Record<string, string>): LiveOffboard
 export function useOffboarding() {
   const [workflows, setWorkflows] = useState<LiveOffboardingWorkflow[]>([]);
   const [candidates, setCandidates] = useState<OffboardingCandidate[]>([]);
+  const [awaiting, setAwaiting] = useState<OffboardingCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,7 +152,7 @@ export function useOffboarding() {
     const [wfRes, profRes, candRes] = await Promise.all([
       supabase.from("workflows").select(WORKFLOW_SELECT).eq("workflow_type", "offboarding").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
-      supabase.from("employees").select("id, employee_id, full_name, sites(name), departments(name)").eq("status", "active").order("surname"),
+      supabase.from("employees").select("id, employee_id, full_name, status, sites(name), departments(name)").in("status", ["active", "offboarding"]).order("surname"),
     ]);
 
     if (wfRes.error) { setError(wfRes.error.message); setLoading(false); return; }
@@ -159,10 +160,16 @@ export function useOffboarding() {
     const profileNames: Record<string, string> = {};
     for (const p of profRes.data ?? []) profileNames[p.id] = p.full_name;
 
-    setWorkflows((wfRes.data ?? []).map((w) => mapWorkflow(w, profileNames)));
-    setCandidates(((candRes.data ?? []) as unknown[])
+    const mapped = (wfRes.data ?? []).map((w) => mapWorkflow(w, profileNames));
+    setWorkflows(mapped);
+    const inFlight = new Set(mapped.filter((m) => m.status !== "Completed").map((m) => m.employeeUuid));
+    const all = ((candRes.data ?? []) as unknown[])
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((e: any) => ({ id: e.id, name: e.full_name, code: e.employee_id, site: e.sites?.name ?? "—", department: e.departments?.name ?? "—" })));
+      .map((e: any) => ({ id: e.id, name: e.full_name, code: e.employee_id, site: e.sites?.name ?? "—", department: e.departments?.name ?? "—", status: e.status as string }))
+      .filter((c) => !inFlight.has(c.id));
+    // people HR already marked as leaving come first in the picker
+    setCandidates([...all.filter((c) => c.status === "offboarding"), ...all.filter((c) => c.status !== "offboarding")]);
+    setAwaiting(all.filter((c) => c.status === "offboarding"));
 
     setLoading(false);
   }, []);
@@ -197,5 +204,5 @@ export function useOffboarding() {
     return null;
   }, [refetch]);
 
-  return { workflows, candidates, loading, error, refetch, startOffboarding, setTaskStatus };
+  return { workflows, candidates, awaiting, loading, error, refetch, startOffboarding, setTaskStatus };
 }

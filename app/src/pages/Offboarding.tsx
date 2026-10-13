@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
+import AwaitingPanel from "@/components/workflow/AwaitingPanel";
 import { useOffboarding, type LiveOffboardingWorkflow, type OffboardingCandidate } from "@/hooks/useOffboarding";
 import type { LiveTask } from "@/hooks/useOnboarding";
 import OffboardingLetter from "@/components/OffboardingLetter";
@@ -73,6 +74,7 @@ const OFFBOARDING_STEPS = ["Select Employee", "Clearance Requirements", "Review 
 // ====================================================================
 
 function OffboardingList({
+  topSlot,
   workflows,
   loadError,
   onNewOffboarding,
@@ -81,6 +83,7 @@ function OffboardingList({
   workflows: LiveOffboardingWorkflow[];
   loadError: string | null;
   onNewOffboarding: () => void;
+  topSlot?: React.ReactNode;
   onViewDetail: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -144,6 +147,7 @@ function OffboardingList({
         </div>
       </div>
 
+      {topSlot}
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#DDDDDD]">
         <div className="relative">
@@ -683,7 +687,8 @@ function OffboardingDetail({
 // NEW OFFBOARDING WIZARD
 // ====================================================================
 
-function NewOffboardingWizard({ open, onClose, candidates, onSubmit }: {
+function NewOffboardingWizard({ open, onClose, candidates, onSubmit, initialEmployeeId }: {
+  initialEmployeeId?: string | null;
   open: boolean;
   onClose: () => void;
   candidates: OffboardingCandidate[];
@@ -693,6 +698,7 @@ function NewOffboardingWizard({ open, onClose, candidates, onSubmit }: {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [selectedEmployee, setSelectedEmployee] = useState("");
+  useEffect(() => { if (open && initialEmployeeId) setSelectedEmployee(initialEmployeeId); }, [open, initialEmployeeId]);
   const [terminationType, setTerminationType] = useState("");
   const [lastWorkingDate, setLastWorkingDate] = useState("");
   const [reason, setReason] = useState("");
@@ -1017,7 +1023,8 @@ export default function Offboarding() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { workflows, candidates, loading, error, startOffboarding, setTaskStatus } = useOffboarding();
+  const { workflows, candidates, awaiting, loading, error, startOffboarding, setTaskStatus } = useOffboarding();
+  const [preselect, setPreselect] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -1054,12 +1061,14 @@ export default function Offboarding() {
       <OffboardingList
         workflows={workflows}
         loadError={error}
-        onNewOffboarding={() => setWizardOpen(true)}
+        onNewOffboarding={() => { setPreselect(null); setWizardOpen(true); }}
         onViewDetail={(workflowId) => navigate(`/offboarding/${workflowId}`)}
+        topSlot={<AwaitingPanel kind="offboarding" people={awaiting} onStart={(id) => { setPreselect(id); setWizardOpen(true); }} />}
       />
       <NewOffboardingWizard
         open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
+        initialEmployeeId={preselect}
+        onClose={() => { setWizardOpen(false); setPreselect(null); }}
         candidates={candidates}
         onSubmit={async (input) => {
           const res = await startOffboarding(input);

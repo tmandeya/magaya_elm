@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { WizardStepper, WorkflowProgressBar, WorkflowStageCard, SignOffForm } from "@/components/workflow";
+import AwaitingPanel from "@/components/workflow/AwaitingPanel";
 import { useOnboarding, type LiveOnboardingWorkflow, type LiveTask, type OnboardingCandidate } from "@/hooks/useOnboarding";
 import OnboardingDocument from "@/components/OnboardingDocument";
 import {
@@ -61,6 +62,7 @@ const STEPS = ["Select Employee", "Security Setup", "IT Provisioning", "Admin Se
 // ====================================================================
 
 function OnboardingList({
+  topSlot,
   workflows,
   loadError,
   onNewOnboarding,
@@ -69,6 +71,7 @@ function OnboardingList({
   workflows: LiveOnboardingWorkflow[];
   loadError: string | null;
   onNewOnboarding: () => void;
+  topSlot?: React.ReactNode;
   onViewDetail: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -133,6 +136,7 @@ function OnboardingList({
         </div>
       </div>
 
+      {topSlot}
       {/* Filter Bar */}
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white rounded-lg border border-[#DDDDDD]">
         <div className="relative">
@@ -639,6 +643,7 @@ function OnboardingDetail({
 // ====================================================================
 
 function NewOnboardingWizard({
+  initialEmployeeIds,
   open,
   onClose,
   candidates,
@@ -647,6 +652,7 @@ function NewOnboardingWizard({
   clearanceOptions,
   onSubmit,
 }: {
+  initialEmployeeIds?: string[] | null;
   open: boolean;
   onClose: () => void;
   candidates: OnboardingCandidate[];
@@ -659,6 +665,7 @@ function NewOnboardingWizard({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  useEffect(() => { if (open && initialEmployeeIds?.length) setSelectedEmployees(initialEmployeeIds); }, [open, initialEmployeeIds]);
   const [empSearch, setEmpSearch] = useState("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [expectedCompletion, setExpectedCompletion] = useState("");
@@ -1080,7 +1087,8 @@ export default function Onboarding() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { workflows, candidates, hardwareOptions, softwareOptions, clearanceOptions, loading, error, startOnboardingMany, setTaskStatus } = useOnboarding();
+  const { workflows, candidates, awaiting, hardwareOptions, softwareOptions, clearanceOptions, loading, error, startOnboardingMany, setTaskStatus } = useOnboarding();
+  const [preselect, setPreselect] = useState<string[] | null>(null);
 
   if (loading) {
     return (
@@ -1121,12 +1129,14 @@ export default function Onboarding() {
       <OnboardingList
         workflows={workflows}
         loadError={error}
-        onNewOnboarding={() => setWizardOpen(true)}
+        onNewOnboarding={() => { setPreselect(null); setWizardOpen(true); }}
         onViewDetail={(workflowId) => navigate(`/onboarding/${workflowId}`)}
+        topSlot={<AwaitingPanel kind="onboarding" people={awaiting} onStart={(id) => { setPreselect([id]); setWizardOpen(true); }} onStartAll={(ids) => { setPreselect(ids); setWizardOpen(true); }} />}
       />
       <NewOnboardingWizard
         open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
+        initialEmployeeIds={preselect}
+        onClose={() => { setWizardOpen(false); setPreselect(null); }}
         candidates={candidates}
         hardwareOptions={hardwareOptions}
         softwareOptions={softwareOptions}

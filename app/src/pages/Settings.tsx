@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import DataMigration from "@/components/DataMigration";
 import { useAdminSettings, type AdminUser, type LookupItem } from "@/hooks/useAdminSettings";
 import { useDashboard } from "@/hooks/useDashboard";
+import PasswordDialog from "@/components/PasswordDialog";
+import { supabase } from "@/lib/supabase";
 import { ROLE_LABELS, DB_ROLE_TO_UI, type DbAppRole } from "@/types/db";
 
 const TABS = [
@@ -77,6 +79,7 @@ export default function Settings() {
   const s = useAdminSettings();
   const { workflowStats } = useDashboard();
   const [busy, setBusy] = useState(false);
+  const [pwUser, setPwUser] = useState<AdminUser | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -126,6 +129,9 @@ export default function Settings() {
 
   return (
     <div className="space-y-5">
+      <PasswordDialog open={!!pwUser} onClose={() => setPwUser(null)} showGenerate title={`Set password — ${pwUser?.fullName ?? ""}`}
+        subtitle="Use this when someone cannot use Microsoft sign-in (for example Chandelier-domain users) or cannot receive the reset email. The change is recorded in the audit log."
+        onSubmit={async (pw) => { const { error } = await supabase.rpc("fn_admin_set_password", { p_user: pwUser!.id, p_password: pw }); return error ? error.message : null; }} />
       <div>
         <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Settings</h1>
         <p className="text-[13px] text-[#525252] mt-1">System configuration and administrative preferences</p>
@@ -200,6 +206,7 @@ export default function Settings() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <button onClick={() => openEdit(u)} className="text-[#1E6BA3] hover:underline text-[12px] font-medium flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
+                            <button onClick={() => setPwUser(u)} className="text-[#525252] hover:underline text-[12px] font-medium">Password</button>
                             <button disabled={busy} onClick={async () => { setBusy(true); const err = await s.setUserActive(u.id, !u.isActive); setBusy(false); if (err) setActionError(err); }}
                               className={cn("text-[12px] font-medium hover:underline", u.isActive ? "text-[#B91C1C]" : "text-[#1B7A43]")}>{u.isActive ? "Disable" : "Enable"}</button>
                           </div>

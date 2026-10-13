@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, LogOut, User, Settings, MapPin } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User, Settings, MapPin, KeyRound } from "lucide-react";
+import PasswordDialog from "@/components/PasswordDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ interface TopbarProps { title: string; breadcrumb?: { label: string; path?: stri
 
 export default function Topbar({ title, breadcrumb }: TopbarProps) {
   const { user, logout } = useAuth();
+  const [pwOpen, setPwOpen] = useState(false);
   const navigate = useNavigate();
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -130,12 +132,16 @@ export default function Topbar({ title, breadcrumb }: TopbarProps) {
             <div className="absolute right-0 top-full mt-1 w-[200px] bg-white rounded-lg border border-[#DDDDDD] shadow-dropdown z-50 py-1">
               <button onClick={() => setUserDropdownOpen(false)} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#000000] hover:bg-[#FAFAFA] transition-colors"><User className="w-4 h-4 text-[#9C9C9C]" />Profile</button>
               <button onClick={() => { setUserDropdownOpen(false); navigate("/settings"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#000000] hover:bg-[#FAFAFA] transition-colors"><Settings className="w-4 h-4 text-[#9C9C9C]" />Settings</button>
+              <button onClick={() => { setUserDropdownOpen(false); setPwOpen(true); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#000000] hover:bg-[#FAFAFA] transition-colors"><KeyRound className="w-4 h-4 text-[#9C9C9C]" />Set my password</button>
               <div className="border-t border-[#DDDDDD] my-1" />
               <button onClick={() => { setUserDropdownOpen(false); logout(); navigate("/login"); }} className="w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#B91C1C] hover:bg-[#FEF2F2] transition-colors"><LogOut className="w-4 h-4" />Sign Out</button>
             </div>
           )}
         </div>
       </div>
+    <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} title="Set my password"
+        subtitle="Lets you sign in with your email and password as well as with Microsoft. Useful if Microsoft sign-in is ever unavailable."
+        onSubmit={async (pw) => { const { error } = await supabase.auth.updateUser({ password: pw }); return error ? error.message : null; }} />
     </header>
   );
 }

@@ -230,9 +230,18 @@ export function useEmployees() {
     return null;
   }, [formToDb, refetch]);
 
-  const updateEmployee = useCallback(async (id: string, form: EmployeeFormInput): Promise<string | null> => {
-    const { error: err } = await supabase.from("employees").update(formToDb(form)).eq("id", id);
+  const updateEmployee = useCallback(async (id: string, form: EmployeeFormInput, original?: EmployeeFormInput): Promise<string | null> => {
+    const next = formToDb(form) as Record<string, unknown>;
+    delete next.date_of_engagement; // engagement date is historical; edits never overwrite it
+    let patch: Record<string, unknown> = next;
+    if (original) {
+      const before = formToDb(original) as Record<string, unknown>;
+      patch = Object.fromEntries(Object.entries(next).filter(([k, v]) => JSON.stringify(v ?? null) !== JSON.stringify(before[k] ?? null)));
+      if (!Object.keys(patch).length) return null; // nothing changed
+    }
+    const { data, error: err } = await supabase.from("employees").update(patch).eq("id", id).select("id");
     if (err) return err.message;
+    if (!data?.length) return "Not saved: you do not have permission to edit this employee.";
     await refetch();
     return null;
   }, [formToDb, refetch]);

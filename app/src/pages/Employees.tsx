@@ -96,6 +96,7 @@ export default function Employees() {
   const navigate = useNavigate();
   const { employees: liveEmployees, sites, departments, loading, error, createEmployee, updateEmployee, archiveEmployee } = useEmployees();
   const DEPARTMENTS = useMemo(() => departments.map((d) => d.name), [departments]);
+  const gradeOptions = useMemo(() => Array.from(new Set([...liveEmployees.map((e) => e.jobGrade).filter(Boolean) as string[], ...GRADES])).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })), [liveEmployees]);
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -195,8 +196,9 @@ export default function Employees() {
 
   const openEditModal = (emp: ExtendedEmployee) => {
     setEditingEmployee(emp);
-    setFormData({ ...emp });
+    setFormData({ ...emp, jobTitle: emp.position || emp.jobTitle, siteId: sites.find((x) => x.id === emp.siteId)?.name ?? "" });
     setFormErrors({});
+    setActionError(null);
     setFormTab("personal");
     setIsEditModalOpen(true);
   };
@@ -221,11 +223,19 @@ export default function Employees() {
     const errs: Record<string, string> = {};
     if (!formData.firstName?.trim()) errs.firstName = "First name is required";
     if (!formData.lastName?.trim()) errs.lastName = "Surname is required";
-    if (!formData.email?.trim()) errs.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+$/.test(formData.email)) errs.email = "Invalid email";
-    if (!formData.phone?.trim()) errs.phone = "Phone is required";
+    if (formData.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) errs.email = "Invalid email";
+    if (!String(formData.jobTitle ?? "").trim()) errs.jobTitle = "Job title is required";
+    if (!formData.siteId) errs.siteId = "Site is required";
+    if (!formData.department || formData.department === "—") errs.department = "Department is required";
     setFormErrors(errs);
-    return Object.keys(errs).length === 0;
+    const keys = Object.keys(errs);
+    if (keys.length) {
+      // jump to the tab holding the first problem so the message is visible
+      const tabOf: Record<string, string> = { firstName: "personal", lastName: "personal", jobTitle: "employment", siteId: "employment", department: "employment", email: "contact" };
+      setFormTab(tabOf[keys[0]] ?? formTab);
+      setActionError(`Please fix: ${keys.map((k) => errs[k]).join(", ")}.`);
+    }
+    return keys.length === 0;
   };
 
   const handleSaveNew = async () => {
@@ -242,7 +252,7 @@ export default function Employees() {
     if (!validateForm() || !editingEmployee) return;
     setSaving(true);
     setActionError(null);
-    const err = await updateEmployee(editingEmployee.id, formData);
+    const err = await updateEmployee(editingEmployee.id, formData, { ...editingEmployee, jobTitle: editingEmployee.position || editingEmployee.jobTitle, siteId: sites.find((x) => x.id === editingEmployee.siteId)?.name ?? "" });
     setSaving(false);
     if (err) { setActionError(err); return; }
     setIsEditModalOpen(false);
@@ -304,7 +314,7 @@ export default function Employees() {
               {FormField({ label: "Nationality", name: "nationality", type: "select", options: ["Zimbabwean", "South African", "Zambian", "Botswanan", "Other"] })}
             </div>
             <div>
-              <FormField label="Photo URL" name="photoUrl" placeholder="https://..." />
+              {FormField({ label: "Photo URL", name: "photoUrl", placeholder: "https://..." })}
               {FormField({ label: "Home Address", name: "homeAddress", type: "textarea", placeholder: "Full residential address" })}
               <div className="border-t border-[#DDDDDD] pt-3 mt-2">
                 <p className="text-[13px] font-semibold text-[#525252] mb-2">Emergency Contact</p>
@@ -324,11 +334,11 @@ export default function Employees() {
               </div>
               {FormField({ label: "Job Title", name: "jobTitle", required: true })}
               {FormField({ label: "Department", name: "department", type: "select", options: DEPARTMENTS, required: true })}
-              <FormField label="Site" name="siteId" type="select" options={sites.map((s) => s.fullName)} required />
+              {FormField({ label: "Site", name: "siteId", type: "select", options: sites.map((x) => x.name), required: true })}
               {FormField({ label: "Employment Type", name: "employeeType", type: "select", options: ["Permanent", "Contract", "Intern"] })}
             </div>
             <div>
-              {FormField({ label: "Job Grade", name: "jobGrade", type: "select", options: GRADES })}
+              {FormField({ label: "Job Grade", name: "jobGrade", type: "select", options: gradeOptions })}
               {FormField({ label: "Contract Start Date", name: "contractStart", type: "date" })}
               {FormField({ label: "Contract End Date", name: "contractEnd", type: "date" })}
               {FormField({ label: "Status", name: "status", type: "select", options: STATUSES, required: true })}
@@ -339,9 +349,9 @@ export default function Employees() {
         <TabsContent value="contact" className="mt-0">
           <div className="grid grid-cols-2 gap-x-6">
             <div>
-              {FormField({ label: "Work Email", name: "email", type: "email", required: true, placeholder: "name@magayamining.co.zw" })}
+              {FormField({ label: "Work Email", name: "email", type: "email", placeholder: "name@magayamining.com" })}
               {FormField({ label: "Personal Email", name: "personalEmail", type: "email" })}
-              {FormField({ label: "Phone", name: "phone", required: true, placeholder: "+263 77X XXX XXX" })}
+              {FormField({ label: "Phone", name: "phone", placeholder: "+263 77X XXX XXX" })}
               {FormField({ label: "Years of Experience", name: "yearsOfExperience", type: "number" })}
             </div>
             <div>
@@ -583,6 +593,7 @@ export default function Employees() {
         <DialogContent className="max-w-[800px] max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-[20px] font-semibold">Edit Employee: {editingEmployee?.firstName} {editingEmployee?.lastName}</DialogTitle></DialogHeader>
           {EmployeeForm({ isEdit: true })}
+          {actionError && <div className="px-3 py-2.5 rounded-[6px] border border-[#B91C1C]/30 bg-[#FEF2F2] text-[12px] text-[#B91C1C]">{actionError}</div>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
             <Button className="bg-[#EDC817] hover:bg-[#D9B60F] text-black" disabled={saving} onClick={handleSaveEdit}>{saving ? "Saving..." : "Save Changes"}</Button>

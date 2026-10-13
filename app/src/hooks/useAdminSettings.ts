@@ -96,17 +96,19 @@ export function useAdminSettings() {
   }, [refetch]);
 
   const updateUser = useCallback(async (id: string, input: { fullName: string; role: DbAppRole; siteId: string | null; phone?: string }): Promise<string | null> => {
-    const { error: err } = await supabase.from("profiles").update({
+    const { data, error: err } = await supabase.from("profiles").update({
       full_name: input.fullName, role: input.role, site_id: input.siteId, phone: input.phone ?? null,
-    }).eq("id", id);
+    }).eq("id", id).select("id");
     if (err) return err.message;
+    if (!data?.length) return "Not saved: you do not have permission to change this user.";
     await refetch();
     return null;
   }, [refetch]);
 
   const setUserActive = useCallback(async (id: string, active: boolean): Promise<string | null> => {
-    const { error: err } = await supabase.from("profiles").update({ is_active: active }).eq("id", id);
+    const { data, error: err } = await supabase.from("profiles").update({ is_active: active }).eq("id", id).select("id");
     if (err) return err.message;
+    if (!data?.length) return "Not saved: you do not have permission to change this user.";
     await refetch();
     return null;
   }, [refetch]);

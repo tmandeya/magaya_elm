@@ -365,6 +365,7 @@ export default function Settings() {
               <p className="text-[11px] text-[#9C9C9C]">No password is set here. The user opens the login page, clicks "Forgot password", and sets their own — access stays out of chat, email, and screenshots.</p>
             )}
           </div>
+          {actionError && <div className="px-3 py-2.5 rounded-[6px] border border-[#B91C1C]/30 bg-[#FEF2F2] text-[12px] text-[#B91C1C]">{actionError}</div>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setUserDialog(null)} className="text-[13px]">Cancel</Button>
             <Button disabled={busy || !uName.trim() || !uRole || (userDialog === "add" && !uEmail.trim())} onClick={() => void submitUser()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[13px]">

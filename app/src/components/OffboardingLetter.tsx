@@ -1,6 +1,7 @@
+import { printElement } from "@/lib/printElement";
 // src/components/OffboardingLetter.tsx
 // Generic offboarding-completed letter, generated from live workflow data.
-// A4 print layout via @media print. Template wording is a working draft —
+// A4 print via printElement (isolated iframe). Template wording is a working draft —
 // final wording is subject to Marketing & Communications approval.
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -23,18 +24,10 @@ export default function OffboardingLetter({ workflow, open, onClose }: {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[820px] max-h-[90vh] overflow-y-auto p-0" aria-describedby={undefined}>
-        <style>{`
-          @media print {
-            body * { visibility: hidden !important; }
-            #offboarding-letter, #offboarding-letter * { visibility: visible !important; }
-            #offboarding-letter { position: fixed; inset: 0; width: 100%; padding: 0 !important; }
-            @page { size: A4; margin: 2cm; }
-          }
-        `}</style>
         <div className="flex items-center justify-between px-6 py-3 border-b border-[#DDDDDD] print:hidden">
           <span className="text-[14px] font-semibold text-[#000000]">Offboarding Completion Letter</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => window.print()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px] h-8">
+            <Button size="sm" onClick={() => printElement("offboarding-letter", { title: "Offboarding letter" })} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px] h-8">
               <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save as PDF
             </Button>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-[#525252] hover:bg-[#FAFAFA]"><X className="w-4 h-4" /></button>

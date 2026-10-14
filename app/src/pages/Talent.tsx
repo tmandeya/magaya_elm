@@ -1,3 +1,4 @@
+import { printElement } from "@/lib/printElement";
 // src/pages/Talent.tsx — Graduate Trainees & Attachment Students
 import { useEffect, useMemo, useState } from "react";
 import { GraduationCap, Users, ClipboardCheck, BookOpen, Plus, Upload, Download, Search, Printer, FileText, Play, Square, RefreshCw, Copy, ChevronRight, Star, AlertTriangle, CheckCircle2, X } from "lucide-react";
@@ -580,8 +581,7 @@ function SlipsDialog({ open, onClose, schedule, attempts, byId }: { open: boolea
   const sitting = (id: string | null) => schedule.sittings.find((s) => s.id === id);
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}><DialogContent className="max-w-[880px] max-h-[90vh] overflow-y-auto p-0" aria-describedby={undefined}>
-      <style>{`@media print { body * { visibility: hidden !important; } #slips, #slips * { visibility: visible !important; } #slips { position: absolute; inset: 0; } @page { size: A4; margin: 1cm; } }`}</style>
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#DDDDDD] print:hidden"><span className="text-[14px] font-semibold">Access slips — print and cut</span><button onClick={() => window.print()} className="h-8 px-3 rounded-[4px] bg-[#EDC817] text-black text-[12px] font-semibold flex items-center gap-1.5"><Printer className="w-3.5 h-3.5" />Print</button></div>
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[#DDDDDD] print:hidden"><span className="text-[14px] font-semibold">Access slips — print and cut</span><button onClick={() => printElement("slips", { title: `Access slips — ${schedule.name}` })} className="h-8 px-3 rounded-[4px] bg-[#EDC817] text-black text-[12px] font-semibold flex items-center gap-1.5"><Printer className="w-3.5 h-3.5" />Print</button></div>
       <div id="slips" className="p-6 grid grid-cols-2 gap-3 bg-white">
         {attempts.map((a) => { const p = byId[a.trainee_id]; const s = sitting(a.sitting_id); return (
           <div key={a.id} className="border-2 border-dashed border-[#9C9C9C] rounded-[6px] p-4" style={{ breakInside: "avoid" }}>

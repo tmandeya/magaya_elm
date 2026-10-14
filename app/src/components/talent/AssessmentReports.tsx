@@ -1,3 +1,4 @@
+import { printElement } from "@/lib/printElement";
 // src/components/talent/AssessmentReports.tsx
 // Printable A4 reports: one per candidate, and a consolidated ranked report
 // per exam schedule. Percentiles are WITHIN THIS INTAKE (not national norms).
@@ -21,12 +22,11 @@ function PrintFrame({ id, title, landscape, open, onClose, onCsv, children }: { 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className={`${landscape ? "max-w-[1180px]" : "max-w-[880px]"} max-h-[92vh] overflow-y-auto p-0`} aria-describedby={undefined}>
-        <style>{`@media print { body * { visibility: hidden !important; } #${id}, #${id} * { visibility: visible !important; } #${id} { position: absolute; inset: 0; width: 100%; padding: 0 !important; } @page { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 1.3cm; } }`}</style>
         <div className="flex items-center justify-between px-6 py-3 border-b border-[#DDDDDD] print:hidden sticky top-0 bg-white z-10">
           <span className="text-[14px] font-semibold text-black">{title}</span>
           <div className="flex items-center gap-2">
             {onCsv && <button onClick={onCsv} className="h-8 px-3 rounded-[4px] border border-[#999] text-[12px] font-semibold flex items-center gap-1.5"><Download className="w-3.5 h-3.5" /> CSV</button>}
-            <button onClick={() => window.print()} className="h-8 px-3 rounded-[4px] bg-[#EDC817] text-black text-[12px] font-semibold flex items-center gap-1.5"><Printer className="w-3.5 h-3.5" /> Print / Save as PDF</button>
+            <button onClick={() => printElement(id, { landscape, title })} className="h-8 px-3 rounded-[4px] bg-[#EDC817] text-black text-[12px] font-semibold flex items-center gap-1.5"><Printer className="w-3.5 h-3.5" /> Print / Save as PDF</button>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-[#525252] hover:bg-[#FAFAFA]"><X className="w-4 h-4" /></button>
           </div>
         </div>

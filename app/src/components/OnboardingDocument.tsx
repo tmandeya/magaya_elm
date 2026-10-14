@@ -1,6 +1,7 @@
+import { printElement } from "@/lib/printElement";
 // src/components/OnboardingDocument.tsx
 // Onboarding completion record, generated from live workflow data once HR
-// gives final sign-off. A4 print layout via @media print. Lists what each
+// gives final sign-off. A4 print via printElement (isolated iframe). Lists what each
 // department provisioned and who signed off when. No sensitive personal data
 // (ID numbers, banking, salary) is included.
 
@@ -50,18 +51,10 @@ export default function OnboardingDocument({ workflow, open, onClose }: {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[860px] max-h-[90vh] overflow-y-auto p-0" aria-describedby={undefined}>
-        <style>{`
-          @media print {
-            body * { visibility: hidden !important; }
-            #onboarding-document, #onboarding-document * { visibility: visible !important; }
-            #onboarding-document { position: absolute; inset: 0; width: 100%; padding: 0 !important; }
-            @page { size: A4; margin: 1.6cm; }
-          }
-        `}</style>
         <div className="flex items-center justify-between px-6 py-3 border-b border-[#DDDDDD] print:hidden">
           <span className="text-[14px] font-semibold text-[#000000]">Onboarding Completion Record</span>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => window.print()} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px] h-8">
+            <Button size="sm" onClick={() => printElement("onboarding-document", { title: `Onboarding record — ${workflow.employee.name}` })} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black text-[12px] h-8">
               <Printer className="w-3.5 h-3.5 mr-1.5" /> Print / Save as PDF
             </Button>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-[#525252] hover:bg-[#FAFAFA]"><X className="w-4 h-4" /></button>

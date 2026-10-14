@@ -6,7 +6,7 @@ import { printElement } from "@/lib/printElement";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Printer, X, Download } from "lucide-react";
 import { COGNITIVE_SECTIONS, SECTION_LABELS } from "@/lib/testGenerators";
-import { RISK_META, TYPE_LABEL, band, cohortPercentile, type AttemptSummary, type Schedule, type Trainee } from "@/hooks/useTalent";
+import { RISK_META, TYPE_LABEL, scoreBand, MIN_COHORT_FOR_PERCENTILES, cohortPercentile, type AttemptSummary, type Schedule, type Trainee } from "@/hooks/useTalent";
 
 export const TRAITS: Record<string, { label: string; high: string; low: string; lowIsRisk: boolean }> = {
   conscientiousness: { label: "Conscientiousness", high: "organised, thorough and dependable", low: "flexible but may overlook detail or deadlines", lowIsRisk: true },
@@ -70,7 +70,7 @@ export function narrative(a: AttemptSummary) {
 export function CandidateReport({ attempt, trainee, schedule, cohort, open, onClose }: { attempt: AttemptSummary; trainee: Trainee; schedule: Schedule; cohort: AttemptSummary[]; open: boolean; onClose: () => void }) {
   const done = cohort.filter((c) => c.status === "submitted");
   const overallPct = cohortPercentile(attempt.weighted_score ?? 0, done.map((c) => c.weighted_score ?? 0));
-  const traitAvg = Object.values(attempt.trait_scores ?? {}); const personality = traitAvg.length ? Math.round(traitAvg.reduce((s, x) => s + x, 0) / traitAvg.length) : null;
+  const showPct = done.length >= MIN_COHORT_FOR_PERCENTILES;
   const { strengths, development } = narrative(attempt);
   const risk = RISK_META[attempt.risk ?? "high"];
   return (
@@ -84,16 +84,17 @@ export function CandidateReport({ attempt, trainee, schedule, cohort, open, onCl
       <div className="text-[12px] font-bold uppercase tracking-[0.06em] border-b-2 border-[#EDC817] pb-1 mb-3">Profile summary</div>
       <div className="space-y-2 mb-6 text-[12px]">
         <div className="grid grid-cols-[180px_1fr_60px] items-center gap-3"><span className="font-semibold">Cognitive ability (weighted)</span><Bar value={attempt.weighted_score ?? 0} color="#000" /><span className="text-right font-bold">{attempt.weighted_score ?? 0}</span></div>
-        {personality !== null && <div className="grid grid-cols-[180px_1fr_60px] items-center gap-3"><span className="font-semibold">Personality (average)</span><Bar value={personality} /><span className="text-right font-bold">{personality}</span></div>}
-        <div className="grid grid-cols-[180px_1fr_60px] items-center gap-3"><span className="font-semibold">Standing in this intake</span><Bar value={overallPct} color="#6B6B6B" /><span className="text-right font-bold">{overallPct}th</span></div>
+        {showPct
+          ? <div className="grid grid-cols-[180px_1fr_60px] items-center gap-3"><span className="font-semibold">Standing in this intake</span><Bar value={overallPct} color="#6B6B6B" /><span className="text-right font-bold">{overallPct}th</span></div>
+          : <p className="text-[11px] text-[#6B6B6B]">Ranking within the intake is shown once at least {MIN_COHORT_FOR_PERCENTILES} candidates have completed (currently {done.length}).</p>}
       </div>
 
       <div className="text-[12px] font-bold uppercase tracking-[0.06em] border-b-2 border-[#EDC817] pb-1 mb-3">Cognitive ability</div>
       <table className="w-full text-[12px] mb-6 border border-[#DDDDDD]">
-        <thead><tr className="bg-black text-white"><th className="text-left px-3 py-1.5">Test</th><th className="px-3 py-1.5">Score</th><th className="px-3 py-1.5">Weight</th><th className="px-3 py-1.5 w-[30%]">Intake percentile</th><th className="text-left px-3 py-1.5">Band</th></tr></thead>
+        <thead><tr className="bg-black text-white"><th className="text-left px-3 py-1.5">Test</th><th className="px-3 py-1.5">Score</th><th className="px-3 py-1.5">Weight</th>{showPct && <th className="px-3 py-1.5 w-[26%]">Intake percentile</th>}<th className="text-left px-3 py-1.5">Score band</th></tr></thead>
         <tbody>{COGNITIVE_SECTIONS.filter((s) => attempt.section_scores?.[s]).map((s) => {
           const sc = attempt.section_scores![s]; const pc = cohortPercentile(sc.pct, done.map((c) => c.section_scores?.[s]?.pct ?? 0));
-          return <tr key={s} className="border-b border-[#DDDDDD]"><td className="px-3 py-1.5 font-semibold">{SECTION_LABELS[s]}</td><td className="text-center">{sc.correct}/{sc.total} ({sc.pct}%)</td><td className="text-center">{schedule.weights[s] ?? 0}%</td><td className="px-3"><div className="flex items-center gap-2"><Bar value={pc} /><span className="w-8 text-right">{pc}</span></div></td><td className="px-3">{band(pc)}</td></tr>;
+          return <tr key={s} className="border-b border-[#DDDDDD]"><td className="px-3 py-1.5 font-semibold">{SECTION_LABELS[s]}</td><td className="text-center">{sc.correct}/{sc.total} ({sc.pct}%)</td><td className="text-center">{schedule.weights[s] ?? 0}%</td>{showPct && <td className="px-3"><div className="flex items-center gap-2"><Bar value={pc} /><span className="w-8 text-right">{pc}</span></div></td>}<td className="px-3">{scoreBand(sc.pct)}</td></tr>;
         })}</tbody>
       </table>
 
@@ -134,6 +135,7 @@ export function ScheduleReport({ schedule, attempts, trainees, open, onClose }: 
   const byId = Object.fromEntries(trainees.map((t) => [t.id, t]));
   const done = attempts.filter((a) => a.status === "submitted").sort((a, b) => (b.weighted_score ?? 0) - (a.weighted_score ?? 0));
   const scores = done.map((a) => a.weighted_score ?? 0);
+  const showPct = done.length >= MIN_COHORT_FOR_PERCENTILES;
   const secs = COGNITIVE_SECTIONS.filter((s) => done.some((a) => a.section_scores?.[s]));
   const counts = { low: done.filter((a) => a.risk === "low").length, moderate: done.filter((a) => a.risk === "moderate").length, high: done.filter((a) => a.risk === "high").length };
   const notSat = attempts.filter((a) => a.status !== "submitted" && a.status !== "void");
@@ -146,7 +148,7 @@ export function ScheduleReport({ schedule, attempts, trainees, open, onClose }: 
 
   const csv = () => {
     const head = ["Rank", "Surname", "First name", "Programme", "Institution", "Discipline", "Form", ...secs.map((s) => SECTION_LABELS[s] + " %"), "Weighted score", "Intake percentile", "Deception", "Strength", "Weakness", "Integrity flags", "Recommendation"];
-    const rows = done.map((a, i) => { const t = byId[a.trainee_id]; return [i + 1, t?.surname, t?.first_name, TYPE_LABEL[t?.trainee_type ?? ""], t?.institution ?? "", t?.programme ?? "", a.form_code, ...secs.map((s) => a.section_scores?.[s]?.pct ?? ""), a.weighted_score, cohortPercentile(a.weighted_score ?? 0, scores), a.deception, topTrait(a, true), topTrait(a, false), (a.flags ?? []).join("; "), RISK_META[a.risk ?? "high"].short]; });
+    const rows = done.map((a, i) => { const t = byId[a.trainee_id]; return [i + 1, t?.surname, t?.first_name, TYPE_LABEL[t?.trainee_type ?? ""], t?.institution ?? "", t?.programme ?? "", a.form_code, ...secs.map((s) => a.section_scores?.[s]?.pct ?? ""), a.weighted_score, showPct ? cohortPercentile(a.weighted_score ?? 0, scores) : "n/a (under 10 candidates)", a.deception, topTrait(a, true), topTrait(a, false), (a.flags ?? []).join("; "), RISK_META[a.risk ?? "high"].short]; });
     const body = [head, ...rows].map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const el = document.createElement("a"); el.href = URL.createObjectURL(new Blob([body], { type: "text/csv" })); el.download = `${schedule.name.replace(/\W+/g, "_")}_ranked.csv`; el.click();
   };
@@ -169,7 +171,7 @@ export function ScheduleReport({ schedule, attempts, trainees, open, onClose }: 
           <thead><tr className="bg-black text-white">
             <th className="px-1.5 py-1.5">#</th><th className="text-left px-1.5">Candidate</th><th className="text-left px-1.5">Programme / discipline</th>
             {secs.map((s) => <th key={s} className="px-1.5 leading-tight">{SECTION_LABELS[s].replace(" Reasoning", "").replace("Attention to Detail", "Detail").replace("Data Interpretation", "Data")}<div className="font-normal text-[#EDC817]">{schedule.weights[s] ?? 0}%</div></th>)}
-            <th className="px-1.5">Weighted</th><th className="px-1.5">Pctl</th><th className="px-1.5">Dec.</th><th className="text-left px-1.5">Personality strength</th><th className="text-left px-1.5">Watch area</th><th className="px-1.5">Recommendation</th>
+            <th className="px-1.5">Weighted</th>{showPct && <th className="px-1.5">Pctl</th>}<th className="px-1.5">Dec.</th><th className="text-left px-1.5">Personality strength</th><th className="text-left px-1.5">Watch area</th><th className="px-1.5">Recommendation</th>
           </tr></thead>
           <tbody>{done.map((a, i) => { const t = byId[a.trainee_id]; const r = RISK_META[a.risk ?? "high"]; return (
             <tr key={a.id} className="border-b border-[#DDDDDD]" style={{ breakInside: "avoid" }}>
@@ -177,7 +179,7 @@ export function ScheduleReport({ schedule, attempts, trainees, open, onClose }: 
               <td className="px-1.5"><div className="font-semibold">{t?.surname}, {t?.first_name}</div>{(a.flags ?? []).length > 0 && <div className="text-[9px] text-[#C27A06]">⚑ {(a.flags ?? []).length} integrity flag(s)</div>}</td>
               <td className="px-1.5">{TYPE_LABEL[t?.trainee_type ?? ""]}<div className="text-[9px] text-[#6B6B6B]">{t?.programme ?? t?.institution ?? ""}</div></td>
               {secs.map((s) => <td key={s} className="text-center">{a.section_scores?.[s]?.pct ?? "—"}</td>)}
-              <td className="text-center font-bold">{a.weighted_score}</td><td className="text-center">{cohortPercentile(a.weighted_score ?? 0, scores)}</td>
+              <td className="text-center font-bold">{a.weighted_score}</td>{showPct && <td className="text-center">{cohortPercentile(a.weighted_score ?? 0, scores)}</td>}
               <td className={`text-center ${(a.deception ?? 0) >= 4 ? "text-[#B91C1C] font-bold" : ""}`}>{a.deception}</td>
               <td className="px-1.5">{topTrait(a, true)}</td><td className="px-1.5">{topTrait(a, false)}</td>
               <td className="text-center px-1 font-semibold" style={{ background: r.bg, color: r.fg }}>{r.short}</td>

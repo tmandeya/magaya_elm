@@ -236,6 +236,12 @@ export function cohortPercentile(value: number, values: number[]): number {
   const below = values.filter((v) => v < value).length, equal = values.filter((v) => v === value).length;
   return Math.round(((below + 0.5 * equal) / values.length) * 100);
 }
+/** Percentiles mean little in small intakes; below this they are not shown. */
+export const MIN_COHORT_FOR_PERCENTILES = 10;
+/** Band from the candidate's actual score (not their position in the intake). */
+export function scoreBand(scorePct: number): string {
+  return scorePct >= 80 ? "Strong" : scorePct >= 60 ? "Good" : scorePct >= 40 ? "Fair" : scorePct >= 20 ? "Weak" : "Very weak";
+}
 export function band(pct: number): string {
   return pct >= 80 ? "Above average" : pct >= 60 ? "Upper average" : pct >= 40 ? "Average" : pct >= 20 ? "Lower average" : "Below average";
 }

@@ -4,7 +4,7 @@
 // restricts to HR roles via RLS — non-HR users simply receive no row).
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, getEmployeeIdentity } from "@/lib/supabase";
 
 export interface ProfileDocument {
   id: string;
@@ -61,7 +61,9 @@ export function useEmployeeProfile(employeeId: string | undefined) {
 
     if (empRes.error) { setError(empRes.error.message); setLoading(false); return; }
     if (!empRes.data) { setNotFound(true); setLoading(false); return; }
-    setEmployee(empRes.data);
+    const idn = await getEmployeeIdentity(employeeId);
+    setEmployee({ ...empRes.data, national_id: idn?.national_id ?? null, passport_number: idn?.passport_number ?? null,
+      home_address: idn?.home_address ?? null, identity_restricted: idn === null });
 
     // Photo: stored as a storage path -> signed URL (bucket is private)
     if (empRes.data.photo_url) {

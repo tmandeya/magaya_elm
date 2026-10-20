@@ -185,3 +185,12 @@ export async function getWorkflowById(id: string) {
 // REALTIME SUBSCRIPTIONS
 // ============================
 
+
+// Identity fields (national ID, passport, home address) are encrypted at rest.
+// They can only be read through this guarded, logged server function, which
+// allows HR and administrators for their own sites. Returns null if not allowed.
+export interface EmployeeIdentity { national_id: string | null; passport_number: string | null; home_address: string | null; }
+export async function getEmployeeIdentity(employeeId: string): Promise<EmployeeIdentity | null> {
+  const { data, error } = await supabase.rpc("fn_get_employee_identity", { p_employee_id: employeeId });
+  return error ? null : (data as EmployeeIdentity | null);
+}

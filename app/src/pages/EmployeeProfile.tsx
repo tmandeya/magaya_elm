@@ -154,10 +154,10 @@ export default function EmployeeProfile() {
           <Field label="Initials" value={e.initials} />
           <Field label="Date of Birth" value={e.date_of_birth ? `${fmtDate(e.date_of_birth)}${age != null ? ` (${age} yrs)` : ""}` : null} />
           <Field label="Gender" value={e.gender ? e.gender.charAt(0).toUpperCase() + e.gender.slice(1) : null} />
-          <Field label="National ID" value={e.national_id} />
+          <Field label="National ID" value={e.identity_restricted ? "Restricted to HR" : e.national_id} />
           <Field label="Nationality" value={e.nationality} />
-          <Field label="Passport Number" value={e.passport_number} />
-          <Field label="Home Address" value={e.home_address} />
+          <Field label="Passport Number" value={e.identity_restricted ? "Restricted to HR" : e.passport_number} />
+          <Field label="Home Address" value={e.identity_restricted ? "Restricted to HR" : e.home_address} />
         </Section>
       )}
 

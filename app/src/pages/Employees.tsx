@@ -1,3 +1,4 @@
+import { getEmployeeIdentity } from "@/lib/supabase";
 import { downloadCsv } from "@/lib/safe";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -197,6 +198,13 @@ export default function Employees() {
 
   const openEditModal = (emp: ExtendedEmployee) => {
     setEditingEmployee(emp);
+    // identity fields are encrypted; fetch them only for users allowed to see them
+    void getEmployeeIdentity(emp.id).then((idn) => {
+      if (!idn) return;
+      const extra = { nationalId: idn.national_id ?? undefined, homeAddress: idn.home_address ?? undefined };
+      setEditingEmployee((p) => (p && p.id === emp.id ? { ...p, ...extra } : p));
+      setFormData((f) => ({ ...f, ...extra }));
+    });
     setFormData({ ...emp, jobTitle: emp.position || emp.jobTitle, siteId: sites.find((x) => x.id === emp.siteId)?.name ?? "" });
     setFormErrors({});
     setActionError(null);

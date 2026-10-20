@@ -1,4 +1,6 @@
 import { printElement } from "@/lib/printElement";
+import { useEffect, useState } from "react";
+import { getEmployeeIdentity } from "@/lib/supabase";
 // src/components/OffboardingLetter.tsx
 // Generic offboarding-completed letter, generated from live workflow data.
 // A4 print via printElement (isolated iframe). Template wording is a working draft —
@@ -19,6 +21,8 @@ export default function OffboardingLetter({ workflow, open, onClose }: {
   open: boolean;
   onClose: () => void;
 }) {
+  const [nationalId, setNationalId] = useState<string | null>(null);
+  useEffect(() => { if (open && workflow.employeeUuid) void getEmployeeIdentity(workflow.employeeUuid).then((d) => setNationalId(d?.national_id ?? null)); }, [open, workflow.employeeUuid]);
   const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   return (
@@ -52,7 +56,7 @@ export default function OffboardingLetter({ workflow, open, onClose }: {
 
             <p>
               This letter serves to confirm that <strong>{workflow.employee.name}</strong>
-              {workflow.letter.nationalId ? <> (National ID: {workflow.letter.nationalId})</> : null} was employed by
+              {nationalId ? <> (National ID: {nationalId})</> : null} was employed by
               Magaya Mining (Private) Limited as <strong>{workflow.letter.jobTitle}</strong> in the {workflow.employee.department} department
               at our {workflow.employee.site} operation
               {workflow.letter.engagementDate ? <> from <strong>{fmt(workflow.letter.engagementDate)}</strong></> : null} until{" "}

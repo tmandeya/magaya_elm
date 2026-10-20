@@ -103,7 +103,7 @@ const empTypeToDb = (t?: string) => (t ? t.toLowerCase() : "permanent");
 
 const EMPLOYEE_SELECT = `
   id, employee_id, first_name, surname, initials, date_of_birth, gender,
-  national_id, nationality, home_address, photo_url,
+  nationality, photo_url,
   emergency_contact_name, emergency_contact_phone, emergency_contact_relationship,
   site_id, department_id, job_title_custom, position, employment_type, job_grade,
   contract_start_date, contract_end_date, date_of_engagement, status,

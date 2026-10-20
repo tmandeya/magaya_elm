@@ -52,7 +52,7 @@ const WORKFLOW_SELECT = `
   id, workflow_type, status, notes, created_at, completed_at, initiated_by,
   last_working_day, offboarding_reason, offboarding_deadline,
   employees!workflows_employee_id_fkey (
-    id, employee_id, full_name, photo_url, national_id, date_of_engagement,
+    id, employee_id, full_name, photo_url, date_of_engagement,
     job_title_custom, job_titles(title), sites(name), departments(name)
   ),
   workflow_stages (
@@ -134,7 +134,7 @@ function mapWorkflow(w: any, profileNames: Record<string, string>): LiveOffboard
     letter: {
       jobTitle: w.employees?.job_titles?.title ?? w.employees?.job_title_custom ?? "—",
       engagementDate: w.employees?.date_of_engagement ?? null,
-      nationalId: w.employees?.national_id ?? null,
+      nationalId: null, // encrypted; fetched by the letter via getEmployeeIdentity
       completedAt: w.completed_at ? w.completed_at.slice(0, 10) : null,
     },
   };

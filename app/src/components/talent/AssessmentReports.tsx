@@ -1,3 +1,4 @@
+import { downloadCsv } from "@/lib/safe";
 import { printElement } from "@/lib/printElement";
 // src/components/talent/AssessmentReports.tsx
 // Printable A4 reports: one per candidate, and a consolidated ranked report
@@ -149,8 +150,7 @@ export function ScheduleReport({ schedule, attempts, trainees, open, onClose }: 
   const csv = () => {
     const head = ["Rank", "Surname", "First name", "Programme", "Institution", "Discipline", "Form", ...secs.map((s) => SECTION_LABELS[s] + " %"), "Weighted score", "Intake percentile", "Deception", "Strength", "Weakness", "Integrity flags", "Recommendation"];
     const rows = done.map((a, i) => { const t = byId[a.trainee_id]; return [i + 1, t?.surname, t?.first_name, TYPE_LABEL[t?.trainee_type ?? ""], t?.institution ?? "", t?.programme ?? "", a.form_code, ...secs.map((s) => a.section_scores?.[s]?.pct ?? ""), a.weighted_score, showPct ? cohortPercentile(a.weighted_score ?? 0, scores) : "n/a (under 10 candidates)", a.deception, topTrait(a, true), topTrait(a, false), (a.flags ?? []).join("; "), RISK_META[a.risk ?? "high"].short]; });
-    const body = [head, ...rows].map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const el = document.createElement("a"); el.href = URL.createObjectURL(new Blob([body], { type: "text/csv" })); el.download = `${schedule.name.replace(/\W+/g, "_")}_ranked.csv`; el.click();
+    downloadCsv(`${schedule.name.replace(/\W+/g, "_")}_ranked.csv`, [head, ...rows]);
   };
 
   return (

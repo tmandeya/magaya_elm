@@ -1,7 +1,7 @@
 // src/lib/intakeImport.ts
 // Reads the Talent Programmes intake template (or any similar sheet), maps
 // columns by header name, and validates every row before anything is saved.
-import * as XLSX from "xlsx";
+import { readGrid } from "@/lib/sheet";
 
 export interface IntakeRow {
   line: number; // spreadsheet row number, for messages
@@ -28,14 +28,14 @@ const norm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[*:]/g, "").
 const clean = (s: unknown) => String(s ?? "").replace(/\s+/g, " ").trim();
 const title = (s: string) => s.toLowerCase().replace(/(^|[\s'-])\p{L}/gu, (m) => m.toUpperCase());
 
-export function parseIntake(
+export async function parseIntake(
   data: ArrayBuffer,
+  fileName: string,
   opts: { defaultType: "graduate_trainee" | "attachment_student" | null; sites: { id: string; name: string }[]; existingEmails: Set<string> },
-): { rows: IntakeRow[]; sheetError: string | null } {
-  let wb: XLSX.WorkBook;
-  try { wb = XLSX.read(data, { type: "array" }); } catch { return { rows: [], sheetError: "This file could not be read. Save it as .xlsx or .csv and try again." }; }
-  const sheetName = wb.SheetNames.find((n) => n.toLowerCase() === "candidates") ?? wb.SheetNames.find((n) => n.toLowerCase() !== "instructions" && n.toLowerCase() !== "lists") ?? wb.SheetNames[0];
-  const grid = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[sheetName], { header: 1, blankrows: false, defval: "" });
+): Promise<{ rows: IntakeRow[]; sheetError: string | null }> {
+  let grid: unknown[][];
+  try { grid = await readGrid(data, fileName, { prefer: "candidates", skip: ["instructions", "lists"] }); }
+  catch (e) { return { rows: [], sheetError: e instanceof Error && e.message.startsWith("Please") ? e.message : "This file could not be read. Save it as .xlsx or .csv and try again." }; }
   if (!grid.length) return { rows: [], sheetError: "The sheet is empty." };
 
   // Header = first row that contains a recognisable first-name column

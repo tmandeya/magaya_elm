@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/safe";
 // src/lib/printElement.ts
 // Prints one element on its own A4 page set. The element is copied into a
 // hidden iframe together with the app's stylesheets, so dialogs, scrolling
@@ -18,7 +19,7 @@ export function printElement(id: string, opts: { landscape?: boolean; title?: st
     .join("\n");
 
   doc.open();
-  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${opts.title ?? document.title}</title>${styles}
+  doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(opts.title ?? document.title)}</title>${styles}
     <style>
       @page { size: A4 ${opts.landscape ? "landscape" : "portrait"}; margin: 12mm; }
       html, body { background: #fff !important; margin: 0; padding: 0; }

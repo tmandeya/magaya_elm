@@ -4,7 +4,7 @@
 // import in batches via the server-side fn_import_employees RPC.
 
 import { useMemo, useRef, useState } from "react";
-import * as XLSX from "xlsx";
+import { readGrid, gridToObjects, downloadHeaderTemplate } from "@/lib/sheet";
 import { Upload, FileSpreadsheet, AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -99,9 +99,7 @@ export default function DataMigration() {
     setResult(null);
     try {
       const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { cellDates: true });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      const raw = gridToObjects(await readGrid(buf, file.name)) as Record<string, unknown>[];
       if (raw.length === 0) { setParseError("The file has no data rows."); setParsing(false); return; }
 
       const headers = Object.keys(raw[0]);
@@ -182,10 +180,7 @@ export default function DataMigration() {
 
   const downloadTemplate = () => {
     const headers = ["Code","FirstName","Surname","Initial","CostCentreCode","CostCentre","DateofBirth","DateofEngagement","DepartmentCode","Department","Gender","NationalIdentification","Nationality","Occupation","PaymentBasis","PaymentMethod","PaymentPoint","Payroll","PayrollPeriod","PhoneNo","Position","TaxSummaryNo","TaxTableTypeName","TaxationMethod","AnnualBasicSalary","InnBucks_AccountNumber","ZiG_AccountNumber","Bank_AccountNumber","Bank_Name","Bank_BranchName","Bank_BranchCode","Company","Email","Job Grade","NEC Grade","Leave Balance","Employee Type","Contract Start Date","Contract End Date","Payroll2","Status","Academic Qualifications","Combined Years of Experience","Comments","Experience","Site"];
-    const ws = XLSX.utils.aoa_to_sheet([headers]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Employees");
-    XLSX.writeFile(wb, "Magaya_ELMS_Import_Template.xlsx");
+    void downloadHeaderTemplate(headers, "Employees", "Magaya_ELMS_Import_Template.xlsx");
   };
 
   const previewCols = useMemo(() => {
@@ -206,7 +201,7 @@ export default function DataMigration() {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+        <input ref={fileRef} type="file" accept=".xlsx,.csv" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleFile(f); e.target.value = ""; }} />
         <Button onClick={() => fileRef.current?.click()} disabled={parsing || importing} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black">
           {parsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}

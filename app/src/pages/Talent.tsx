@@ -206,8 +206,8 @@ function ImportDialog({ t, open, onClose }: { t: T; open: boolean; onClose: () =
   const existing = useMemo(() => new Set(t.trainees.map((p) => (p.email ?? "").toLowerCase()).filter(Boolean)), [t.trainees]);
   const readFile = async (f: File | undefined) => {
     if (!f) return; setErr(null); setDone(null);
-    if (!/\.(xlsx|xls|csv)$/i.test(f.name)) { setErr("Please choose an Excel (.xlsx) or CSV file."); return; }
-    const res = parseIntake(await f.arrayBuffer(), { defaultType: null, sites: t.sites, existingEmails: existing });
+    if (!/\.(xlsx|csv)$/i.test(f.name)) { setErr("Please choose an Excel (.xlsx) or CSV file. Older .xls files: open in Excel and Save As .xlsx."); return; }
+    const res = await parseIntake(await f.arrayBuffer(), f.name, { defaultType: null, sites: t.sites, existingEmails: existing });
     setFileName(f.name); setRows(res.rows); if (res.sheetError) setErr(res.sheetError);
   };
   const pasted = useMemo(() => text.split(/\r?\n/).map((l) => l.split(/\t|,/).map((c) => c.trim())).filter((c) => c[0] && c[1] && !/^first/i.test(c[0]))
@@ -240,7 +240,7 @@ function ImportDialog({ t, open, onClose }: { t: T; open: boolean; onClose: () =
             <Upload className="w-7 h-7 text-[#9C9C9C]" />
             <span className="text-[14px] font-semibold">{fileName ?? "Drop the completed file here, or click to choose"}</span>
             <span className="text-[11px] text-[#9C9C9C]">.xlsx or .csv · up to 500 people</span>
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { void readFile(e.target.files?.[0]); e.target.value = ""; }} />
+            <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { void readFile(e.target.files?.[0]); e.target.value = ""; }} />
           </label>
           {rows.length > 0 && <>
             <div className="grid grid-cols-3 gap-2">

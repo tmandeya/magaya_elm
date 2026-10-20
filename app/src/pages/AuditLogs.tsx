@@ -1,3 +1,4 @@
+import { downloadCsv } from "@/lib/safe";
 // Audit Logs: live compliance trail from the immutable audit_logs table.
 import { useState } from "react";
 import { ChevronDown, ShieldCheck, Download } from "lucide-react";
@@ -60,13 +61,10 @@ export default function AuditLogs() {
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
   const exportCsv = () => {
-    const header = "Timestamp,User,Action,Module,Subject,Record ID\n";
-    const body = rows.map((r) => [fmt(r.createdAt), r.performedByName, r.action, MODULE_LABEL[r.tableName] ?? r.tableName, (r.subject ?? "").replace(/,/g, " "), r.recordId ?? ""].join(",")).join("\n");
-    const blob = new Blob([header + body], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `audit_logs_page${page + 1}.csv`;
-    a.click();
+    downloadCsv(`audit_logs_page${page + 1}.csv`, [
+      ["Timestamp", "User", "Action", "Module", "Subject", "Record ID"],
+      ...rows.map((r) => [fmt(r.createdAt), r.performedByName, r.action, MODULE_LABEL[r.tableName] ?? r.tableName, r.subject ?? "", r.recordId ?? ""]),
+    ]);
   };
 
   return (

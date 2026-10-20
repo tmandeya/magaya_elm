@@ -1,3 +1,4 @@
+import { downloadCsv, safeUrl } from "@/lib/safe";
 // src/pages/Recruitment.tsx — in-house recruitment & CV repository
 import { useEffect, useMemo, useState } from "react";
 import { Briefcase, LayoutDashboard, Columns3, Database, Plus, Search, Star, FileText, Linkedin, Copy, ExternalLink, Upload, Calendar, MessageSquare, TrendingUp, Trophy, Users, GripVertical } from "lucide-react";
@@ -201,8 +202,7 @@ function Pool({ r, onOpen }: { r: R; onOpen: (id: string) => void }) {
   }), [r, q, role, site, status, source, jobsById]);
   const exportCsv = () => {
     const head = ["Name", "Email", "Phone", "Current title", "Employer", "Qualification", "Field", "Years exp", "Skills", "Source", "Latest status", "Applied for", "Rating", "Added"];
-    const body = [head, ...rows.map(({ a, stage, jobTitles }) => [a.full_name, a.email, a.phone, a.current_title, a.current_employer, a.highest_qualification, a.field_of_study, a.years_experience, a.skills.join("; "), a.source, stage === "pool" ? "Talent pool" : STAGE_META[stage].label, jobTitles.join("; "), a.rating, fmtDate(a.created_at)])].map((r2) => r2.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const el = document.createElement("a"); el.href = URL.createObjectURL(new Blob([body], { type: "text/csv" })); el.download = "talent_pool.csv"; el.click();
+    downloadCsv("talent_pool.csv", [head, ...rows.map(({ a, stage, jobTitles }) => [a.full_name, a.email, a.phone, a.current_title, a.current_employer, a.highest_qualification, a.field_of_study, a.years_experience, a.skills.join("; "), a.source, stage === "pool" ? "Talent pool" : STAGE_META[stage].label, jobTitles.join("; "), a.rating, fmtDate(a.created_at)])]);
   };
   return (
     <div className="space-y-3">
@@ -296,7 +296,7 @@ function CandidateDrawer({ r, applicantId, onClose }: { r: R; applicantId: strin
             <div className="mt-1.5 flex items-center gap-3"><Stars value={a.rating ?? 0} size={16} onChange={(v) => void r.saveApplicant({ id: a.id, rating: v })} /><span className="text-[11px] text-[#9C9C9C]">via {a.source}</span></div></div></div>
           <div className="flex flex-wrap gap-2 mt-4">
             {a.cv_path && <Button onClick={() => void openCv()} className="h-8 text-[12px] bg-[#EDC817] hover:bg-[#D9B60F] text-black"><FileText className="w-3.5 h-3.5 mr-1.5" />Open CV</Button>}
-            {a.linkedin_url && <a href={a.linkedin_url} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-md text-[12px] font-medium bg-[#0A66C2] text-white flex items-center gap-1.5"><Linkedin className="w-3.5 h-3.5" />LinkedIn</a>}
+            {safeUrl(a.linkedin_url) && <a href={safeUrl(a.linkedin_url)} target="_blank" rel="noreferrer" className="h-8 px-3 rounded-md text-[12px] font-medium bg-[#0A66C2] text-white flex items-center gap-1.5"><Linkedin className="w-3.5 h-3.5" />LinkedIn</a>}
             <Button variant="outline" onClick={() => setEdit(true)} className="h-8 text-[12px] bg-transparent text-white border-[#555] hover:bg-[#222] hover:text-white">Edit</Button>
           </div>
         </div>

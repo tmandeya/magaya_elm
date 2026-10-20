@@ -1,3 +1,4 @@
+import { downloadCsv } from "@/lib/safe";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -261,18 +262,10 @@ export default function Employees() {
 
   const handleExportCSV = () => {
     const rows = selectedIds.size > 0 ? liveEmployees.filter((e) => selectedIds.has(e.id)) : filteredEmployees;
-    const csv = [
-      ["Employee Code", "First Name", "Last Name", "Site", "Department", "Position", "Status", "Phone", "Email", "Gender"].join(","),
-      ...rows.map((e) => [
-        e.code || "", e.firstName, e.lastName, getSiteName(e.siteId), e.department,
-        e.position || e.jobTitle, e.status, e.phone, e.email, e.gender || ""
-      ].join(","))
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "employees.csv"; a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`employees_${new Date().toISOString().slice(0, 10)}.csv`, [
+      ["Employee Code", "First Name", "Last Name", "Site", "Department", "Position", "Status", "Phone", "Email", "Gender"],
+      ...rows.map((e) => [e.code || "", e.firstName, e.lastName, getSiteName(e.siteId), e.department, e.position || e.jobTitle, e.status, e.phone, e.email, e.gender || ""]),
+    ]);
   };
 
   // ── Form Field Helpers ───────────────────────────────────────────────────

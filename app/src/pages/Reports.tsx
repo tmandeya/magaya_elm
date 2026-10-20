@@ -1,3 +1,4 @@
+import { downloadCsv as safeDownloadCsv } from "@/lib/safe";
 // Reports & Analytics: live workforce and workflow analytics with CSV export.
 import { useMemo, useState } from "react";
 import { Users, UserPlus, UserMinus, ArrowLeftRight, Monitor, AlertTriangle, Download } from "lucide-react";
@@ -113,11 +114,7 @@ function WorkflowReport({ title, r }: { title: string; r: WorkflowTypeReport }) 
 }
 
 function downloadCsv(filename: string, header: string[], rows: (string | number)[][]) {
-  const csv = [header.join(","), ...rows.map((r) => r.map((v) => String(v).replace(/,/g, " ")).join(","))].join("\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-  a.download = filename;
-  a.click();
+  safeDownloadCsv(filename, [header, ...rows]);
 }
 
 export default function Reports() {

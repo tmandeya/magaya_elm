@@ -1,6 +1,6 @@
 // src/hooks/useEmployeeProfile.ts
 // Single-employee profile: every imported field, documents (named types),
-// profile photo, and payroll/banking (whose visibility the database
+// and profile photo (visibility is enforced by the database
 // restricts to HR roles via RLS — non-HR users simply receive no row).
 
 import { useState, useEffect, useCallback } from "react";
@@ -17,25 +17,6 @@ export interface ProfileDocument {
   expiryDate: string | null;
   uploadedAt: string;
   signedUrl?: string;
-}
-
-export interface EmployeeFinancials {
-  payment_basis: string | null;
-  payment_method: string | null;
-  payment_point: string | null;
-  payroll_name: string | null;
-  payroll_name_2: string | null;
-  payroll_period: string | null;
-  tax_summary_no: string | null;
-  tax_table_type: string | null;
-  taxation_method: string | null;
-  annual_basic_salary: number | null;
-  innbucks_account: string | null;
-  zig_account: string | null;
-  bank_account: string | null;
-  bank_name: string | null;
-  bank_branch_name: string | null;
-  bank_branch_code: string | null;
 }
 
 // Named document types per the platform requirements
@@ -65,8 +46,6 @@ export function useEmployeeProfile(employeeId: string | undefined) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [employee, setEmployee] = useState<any | null>(null);
   const [documents, setDocuments] = useState<ProfileDocument[]>([]);
-  const [financials, setFinancials] = useState<EmployeeFinancials | null>(null);
-  const [financialsRestricted, setFinancialsRestricted] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -75,10 +54,9 @@ export function useEmployeeProfile(employeeId: string | undefined) {
   const refetch = useCallback(async () => {
     if (!employeeId) return;
     setError(null);
-    const [empRes, docRes, finRes] = await Promise.all([
+    const [empRes, docRes] = await Promise.all([
       supabase.from("employees").select(EMPLOYEE_FULL_SELECT).eq("id", employeeId).maybeSingle(),
       supabase.from("employee_documents").select("*").eq("employee_id", employeeId).order("created_at", { ascending: false }),
-      supabase.from("employee_financials").select("*").eq("employee_id", employeeId).maybeSingle(),
     ]);
 
     if (empRes.error) { setError(empRes.error.message); setLoading(false); return; }
@@ -111,19 +89,6 @@ export function useEmployeeProfile(employeeId: string | undefined) {
     }
     setDocuments(docs);
 
-    // Financials: RLS returns no row for non-HR users
-    if (finRes.error) {
-      setFinancialsRestricted(true);
-    } else if (finRes.data) {
-      setFinancials(finRes.data as EmployeeFinancials);
-      setFinancialsRestricted(false);
-    } else {
-      // No row could mean: none exists, or RLS filtered it. Distinguish by
-      // asking for a bare count with the caller's rights on ANY row.
-      setFinancials(null);
-      const { count } = await supabase.from("employee_financials").select("id", { count: "exact", head: true });
-      setFinancialsRestricted((count ?? 0) === 0);
-    }
 
     setLoading(false);
   }, [employeeId]);
@@ -171,5 +136,5 @@ export function useEmployeeProfile(employeeId: string | undefined) {
     return null;
   }, [refetch]);
 
-  return { employee, documents, financials, financialsRestricted, photoUrl, loading, notFound, error, refetch, uploadPhoto, uploadDocument, removeDocument };
+  return { employee, documents, photoUrl, loading, notFound, error, refetch, uploadPhoto, uploadDocument, removeDocument };
 }

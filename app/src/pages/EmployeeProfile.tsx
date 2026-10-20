@@ -1,14 +1,13 @@
 // Employee Profile: every field from the master data, arranged for reading.
-// Documents with named types, profile photo, payroll/banking restricted to HR.
+// Documents with named types and profile photo.
 import { useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ChevronLeft, Camera, Upload, FileText, Trash2, Lock, Loader2, ExternalLink, User as UserIcon } from "lucide-react";
+import { ChevronLeft, Camera, Upload, FileText, Trash2, Loader2, ExternalLink, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useEmployeeProfile, DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL, type ProfileDocument } from "@/hooks/useEmployeeProfile";
-import { useAuth } from "@/hooks/useAuth";
 
 // Module-level (never inside the component — preserves input focus)
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -37,13 +36,12 @@ const STATUS_STYLE: Record<string, string> = {
   terminated: "bg-[#F5F5F5] text-[#6B6B6B]", archived: "bg-[#F5F5F5] text-[#6B6B6B]",
 };
 
-const TABS = ["Personal", "Employment", "Contact & Emergency", "Qualifications", "Payroll & Banking", "Documents"] as const;
+const TABS = ["Personal", "Employment", "Contact & Emergency", "Qualifications", "Documents"] as const;
 
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
-  const { employee: e, documents, financials, financialsRestricted, photoUrl, loading, notFound, error, uploadPhoto, uploadDocument, removeDocument } = useEmployeeProfile(id);
+  const { employee: e, documents, photoUrl, loading, notFound, error, uploadPhoto, uploadDocument, removeDocument } = useEmployeeProfile(id);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Personal");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -60,7 +58,6 @@ export default function EmployeeProfile() {
     return Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000));
   }, [e]);
 
-  const isHr = currentRole === "site_hr" || currentRole === "hq_hr" || currentRole === "hod_hr";
 
   if (loading) {
     return (
@@ -145,7 +142,7 @@ export default function EmployeeProfile() {
           <button key={t} onClick={() => setTab(t)}
             className={cn("px-4 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors",
               tab === t ? "border-[#EDC817] text-[#000000]" : "border-transparent text-[#6B6B6B] hover:text-[#000000]")}>
-            {t}{t === "Documents" ? ` (${documents.length})` : ""}{t === "Payroll & Banking" && financialsRestricted ? " 🔒" : ""}
+            {t}{t === "Documents" ? ` (${documents.length})` : ""}
           </button>
         ))}
       </div>
@@ -215,40 +212,6 @@ export default function EmployeeProfile() {
         </Section>
       )}
 
-      {tab === "Payroll & Banking" && (
-        financialsRestricted || (!financials && !isHr) ? (
-          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-10 flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-[#FAFAFA] border border-[#DDDDDD] flex items-center justify-center"><Lock className="w-5 h-5 text-[#9C9C9C]" /></div>
-            <p className="text-[15px] font-semibold text-[#000000]">Restricted to Human Resources</p>
-            <p className="text-[13px] text-[#6B6B6B] max-w-[420px]">Payroll and banking details are visible to HR roles only. This restriction is enforced by the database, not just hidden in the interface.</p>
-          </div>
-        ) : financials ? (
-          <div className="space-y-5">
-            <Section title="Payroll">
-              <Field label="Payment Basis" value={financials.payment_basis} />
-              <Field label="Payment Method" value={financials.payment_method} />
-              <Field label="Payment Point" value={financials.payment_point} />
-              <Field label="Payroll" value={financials.payroll_name} />
-              <Field label="Payroll 2" value={financials.payroll_name_2} />
-              <Field label="Payroll Period" value={fmtDate(financials.payroll_period)} />
-              <Field label="Annual Basic Salary" value={financials.annual_basic_salary != null ? `USD ${Number(financials.annual_basic_salary).toLocaleString()}` : null} />
-              <Field label="Tax Summary No" value={financials.tax_summary_no} />
-              <Field label="Tax Table" value={financials.tax_table_type} />
-              <Field label="Taxation Method" value={financials.taxation_method} />
-            </Section>
-            <Section title="Banking">
-              <Field label="Bank" value={financials.bank_name} />
-              <Field label="Account Number" value={financials.bank_account} />
-              <Field label="Branch" value={financials.bank_branch_name} />
-              <Field label="Branch Code" value={financials.bank_branch_code} />
-              <Field label="InnBucks Account" value={financials.innbucks_account} />
-              <Field label="ZiG Account" value={financials.zig_account} />
-            </Section>
-          </div>
-        ) : (
-          <div className="bg-white rounded-[6px] border border-[#DDDDDD] p-10 text-center text-[13px] text-[#6B6B6B]">No payroll record for this employee yet.</div>
-        )
-      )}
 
       {tab === "Documents" && (
         <div className="space-y-5">

@@ -1,6 +1,6 @@
 // src/components/DataMigration.tsx
 // Employee data migration: upload the HR master-data export (.xlsx/.csv),
-// auto-map its columns, validate, preview (financial values masked), and
+// auto-map its columns, validate, preview, and
 // import in batches via the server-side fn_import_employees RPC.
 
 import { useMemo, useRef, useState } from "react";
@@ -25,20 +25,17 @@ const HEADER_MAP: Record<string, string> = {
   "status": "status", "academicqualifications": "academic_qualifications",
   "combinedyearsofexperience": "years_of_experience", "experience": "experience_detail",
   "comments": "comments", "company": "company", "site": "site", "internalid": "internal_id",
-  // Financial fields -> restricted employee_financials table
-  "paymentbasis": "payment_basis", "paymentmethod": "payment_method", "paymentpoint": "payment_point",
-  "payroll": "payroll_name", "payroll2": "payroll_name_2", "payrollperiod": "payroll_period",
-  "taxsummaryno": "tax_summary_no", "taxtabletypename": "tax_table_type", "taxationmethod": "taxation_method",
-  "annualbasicsalary": "annual_basic_salary",
-  "innbucks_accountnumber": "innbucks_account", "zig_accountnumber": "zig_account",
-  "bank_accountnumber": "bank_account", "bank_name": "bank_name",
-  "bank_branchname": "bank_branch_name", "bank_branchcode": "bank_branch_code",
+  // Payroll is managed on Belina: these columns are recognised and discarded in the
+  // browser, so payroll data in an HR export is never sent to ELMS.
+  "paymentbasis": "", "paymentmethod": "", "paymentpoint": "", "payroll": "", "payroll2": "", "payrollperiod": "",
+  "taxsummaryno": "", "taxtabletypename": "", "taxationmethod": "", "annualbasicsalary": "",
+  "innbucks_accountnumber": "", "zig_accountnumber": "", "bank_accountnumber": "", "bank_name": "",
+  "bank_branchname": "", "bank_branchcode": "",
   // Ignored (derived in DB)
   "fullname": "", "employee": "",
 };
 
-const FINANCIAL_KEYS = new Set(["payment_basis","payment_method","payment_point","payroll_name","payroll_name_2","payroll_period","tax_summary_no","tax_table_type","taxation_method","annual_basic_salary","innbucks_account","zig_account","bank_account","bank_name","bank_branch_name","bank_branch_code"]);
-const DATE_KEYS = new Set(["date_of_birth","date_of_engagement","contract_start_date","contract_end_date","payroll_period"]);
+const DATE_KEYS = new Set(["date_of_birth","date_of_engagement","contract_start_date","contract_end_date"]);
 
 const norm = (h: string) => h.toLowerCase().replace(/[^a-z0-9_]/g, "");
 
@@ -89,8 +86,7 @@ export default function DataMigration() {
     }
     if (missingRequired) problems.push(`${missingRequired} row(s) missing Code, FirstName or Surname — these will be rejected`);
     if (dupes) problems.push(`${dupes} duplicate code(s) within the file — later rows will overwrite earlier ones in 'update' mode`);
-    const hasFinancials = rows.some((r) => FINANCIAL_KEYS.size && Array.from(FINANCIAL_KEYS).some((k) => r[k]));
-    return { problems, hasFinancials };
+    return { problems };
   }, [rows]);
 
   const handleFile = async (file: File) => {
@@ -179,7 +175,7 @@ export default function DataMigration() {
   };
 
   const downloadTemplate = () => {
-    const headers = ["Code","FirstName","Surname","Initial","CostCentreCode","CostCentre","DateofBirth","DateofEngagement","DepartmentCode","Department","Gender","NationalIdentification","Nationality","Occupation","PaymentBasis","PaymentMethod","PaymentPoint","Payroll","PayrollPeriod","PhoneNo","Position","TaxSummaryNo","TaxTableTypeName","TaxationMethod","AnnualBasicSalary","InnBucks_AccountNumber","ZiG_AccountNumber","Bank_AccountNumber","Bank_Name","Bank_BranchName","Bank_BranchCode","Company","Email","Job Grade","NEC Grade","Leave Balance","Employee Type","Contract Start Date","Contract End Date","Payroll2","Status","Academic Qualifications","Combined Years of Experience","Comments","Experience","Site"];
+    const headers = ["Code","FirstName","Surname","Initial","CostCentreCode","CostCentre","DateofBirth","DateofEngagement","DepartmentCode","Department","Gender","NationalIdentification","Nationality","Occupation","PhoneNo","Position","Company","Email","Job Grade","NEC Grade","Leave Balance","Employee Type","Contract Start Date","Contract End Date","Status","Academic Qualifications","Combined Years of Experience","Comments","Experience","Site"];
     void downloadHeaderTemplate(headers, "Employees", "Magaya_ELMS_Import_Template.xlsx");
   };
 
@@ -196,7 +192,7 @@ export default function DataMigration() {
         <h3 className="text-[16px] font-semibold text-[#000000]">Employee Data Migration</h3>
         <p className="text-[13px] text-[#525252] mt-1">
           Upload the HR master-data export (.xlsx or .csv). Columns are matched to the approved field template automatically.
-          Payroll and banking fields are stored in a restricted table visible to HR roles only.
+          Payroll and banking columns are ignored: payroll is managed on Belina, not in ELMS.
         </p>
       </div>
 
@@ -262,7 +258,7 @@ export default function DataMigration() {
                   <tr key={i}>
                     {previewCols.map((c) => (
                       <td key={c} className="px-3 py-2 text-[#000000] whitespace-nowrap">
-                        {FINANCIAL_KEYS.has(c) && r[c] ? "•••••" : (r[c] || <span className="text-[#C4C4C4]">—</span>)}
+                        {r[c] || <span className="text-[#C4C4C4]">—</span>}
                       </td>
                     ))}
                   </tr>

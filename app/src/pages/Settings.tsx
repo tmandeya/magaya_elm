@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import DataMigration from "@/components/DataMigration";
 import { useAdminSettings, type AdminUser, type LookupItem } from "@/hooks/useAdminSettings";
 import { useDashboard } from "@/hooks/useDashboard";
-import PasswordDialog from "@/components/PasswordDialog";
 import { supabase } from "@/lib/supabase";
 import { ROLE_LABELS, DB_ROLE_TO_UI, type DbAppRole } from "@/types/db";
 
@@ -79,7 +78,6 @@ export default function Settings() {
   const s = useAdminSettings();
   const { workflowStats } = useDashboard();
   const [busy, setBusy] = useState(false);
-  const [pwUser, setPwUser] = useState<AdminUser | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -114,7 +112,7 @@ export default function Settings() {
       : await s.updateUser(editing!.id, { fullName: uName.trim(), role: uRole as DbAppRole, siteId: uSite || null, phone: uPhone.trim() || undefined });
     setBusy(false);
     if (err) { setActionError(err); return; }
-    if (userDialog === "add") setNotice(`User created. Tell them to open the login page, use "Forgot password" with ${uEmail.trim()}, and set their own password.`);
+    if (userDialog === "add") setNotice(`User created. They sign in with “Sign in with Microsoft” using ${uEmail.trim()}. HR and administrator roles will be asked to set up an ELMS code the first time.`);
     setUserDialog(null);
   };
 
@@ -129,9 +127,6 @@ export default function Settings() {
 
   return (
     <div className="space-y-5">
-      <PasswordDialog open={!!pwUser} onClose={() => setPwUser(null)} showGenerate title={`Set password — ${pwUser?.fullName ?? ""}`}
-        subtitle="Use this when someone cannot use Microsoft sign-in (for example Chandelier-domain users) or cannot receive the reset email. The change is recorded in the audit log."
-        onSubmit={async (pw) => { const { error } = await supabase.rpc("fn_admin_set_password", { p_user: pwUser!.id, p_password: pw }); return error ? error.message : null; }} />
       <div>
         <h1 className="text-[28px] font-bold text-[#000000] tracking-[-0.02em]">Settings</h1>
         <p className="text-[13px] text-[#525252] mt-1">System configuration and administrative preferences</p>
@@ -166,7 +161,7 @@ export default function Settings() {
               <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
                   <h2 className="text-[18px] font-semibold text-[#000000]">User Management</h2>
-                  <p className="text-[12px] text-[#525252]">Platform users, their roles and site scope. New users set their own password via "Forgot password".</p>
+                  <p className="text-[12px] text-[#525252]">Platform users, their roles and site scope. Everyone signs in with Microsoft; HR and administrator roles also use an ELMS code.</p>
                 </div>
                 <Button onClick={openAdd} className="bg-[#EDC817] hover:bg-[#D9B60F] text-black"><Plus className="w-4 h-4 mr-1.5" /> Add User</Button>
               </div>
@@ -206,7 +201,7 @@ export default function Settings() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <button onClick={() => openEdit(u)} className="text-[#1E6BA3] hover:underline text-[12px] font-medium flex items-center gap-1"><Pencil className="w-3 h-3" /> Edit</button>
-                            <button onClick={() => setPwUser(u)} className="text-[#525252] hover:underline text-[12px] font-medium">Password</button>
+                            <button onClick={async () => { if (!confirm(`Reset ${u.fullName}'s ELMS code? They will set up a new authenticator at their next sign-in.`)) return; const { error } = await supabase.rpc("fn_admin_reset_mfa", { p_user: u.id }); if (error) setActionError(error.message); else setNotice(`${u.fullName}'s ELMS code was reset. They will be asked to set it up again at their next sign-in.`); }} className="text-[#525252] hover:underline text-[12px] font-medium">Reset code</button>
                             <button disabled={busy} onClick={async () => { setBusy(true); const err = await s.setUserActive(u.id, !u.isActive); setBusy(false); if (err) setActionError(err); }}
                               className={cn("text-[12px] font-medium hover:underline", u.isActive ? "text-[#B91C1C]" : "text-[#1B7A43]")}>{u.isActive ? "Disable" : "Enable"}</button>
                           </div>
@@ -309,7 +304,7 @@ export default function Settings() {
               </div>
               <div className="mt-5 text-[12px] text-[#6B6B6B] space-y-1">
                 <p>Application: Magaya ELMS v2 · Backend: Supabase (magaya-elm_platform, eu-west-2) · Hosting: Vercel</p>
-                <p>Authentication: email/password with recovery · Access control: role-based, database-enforced (RLS)</p>
+                <p>Authentication: Microsoft sign-in only, plus ELMS authenticator code for HR and administrators · Access control: role-based, database-enforced (RLS)</p>
               </div>
             </div>
           )}
@@ -362,7 +357,7 @@ export default function Settings() {
               </div>
             </div>
             {userDialog === "add" && (
-              <p className="text-[11px] text-[#9C9C9C]">No password is set here. The user opens the login page, clicks "Forgot password", and sets their own — access stays out of chat, email, and screenshots.</p>
+              <p className="text-[11px] text-[#9C9C9C]">No password is needed: the user signs in with their Magaya Microsoft account (the email must match). HR and administrator roles set up an ELMS code at their first sign-in.</p>
             )}
           </div>
           {actionError && <div className="px-3 py-2.5 rounded-[6px] border border-[#B91C1C]/30 bg-[#FEF2F2] text-[12px] text-[#B91C1C]">{actionError}</div>}

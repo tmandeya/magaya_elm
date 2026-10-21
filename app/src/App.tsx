@@ -5,7 +5,7 @@ import Layout from "@/components/Layout";
 
 // Eager load login (first thing users see)
 import Login from "@/pages/Login";
-import ResetPassword from "@/pages/ResetPassword";
+import MfaGate from "@/pages/MfaGate";
 
 // Lazy load all other pages for code splitting
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -47,9 +47,8 @@ function LoadingFallback() {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, isLoading, isPasswordRecovery } = useAuth();
+  const { isAuthenticated, isLoading, mfaState } = useAuth();
   if (isLoading) return <LoadingFallback />;
-  if (isPasswordRecovery) return <ResetPassword />;
   return (
     <Routes>
       {/* Public pages: no login required */}
@@ -58,7 +57,7 @@ function AppRoutes() {
       <Route path="/careers" element={<Suspense fallback={<LoadingFallback />}><Careers /></Suspense>} />
       <Route path="/careers/:slug" element={<Suspense fallback={<LoadingFallback />}><Careers /></Suspense>} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" replace />}>
+      <Route element={isAuthenticated ? (mfaState === "ok" ? <Layout /> : <MfaGate />) : <Navigate to="/login" replace />}>
         <Route path="/dashboard" element={<Suspense fallback={<LoadingFallback />}><Dashboard /></Suspense>} />
         <Route path="/employees" element={<Suspense fallback={<LoadingFallback />}><Employees /></Suspense>} />
         <Route path="/employees/:id" element={<Suspense fallback={<LoadingFallback />}><EmployeeProfile /></Suspense>} />

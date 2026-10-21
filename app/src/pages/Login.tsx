@@ -1,51 +1,20 @@
 import { OAUTH_ERROR_KEY } from "@/lib/supabase";
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { User, Lock, Eye, EyeOff, ArrowRight, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 export default function Login() {
-  const navigate = useNavigate();
-  const { login, loginWithMicrosoft } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const { loginWithMicrosoft, authNotice } = useAuth();
   const [ssoLoading, setSsoLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [authError, setAuthError] = useState<string | null>(() => {
     const e = sessionStorage.getItem(OAUTH_ERROR_KEY);
     if (!e) return null;
     sessionStorage.removeItem(OAUTH_ERROR_KEY);
     return `Microsoft sign-in did not complete: ${e}. Please send this message to IT.`;
   });
-  const [shakeField, setShakeField] = useState<string | null>(null);
-
-  const shake = useCallback((field: string) => { setShakeField(field); setTimeout(() => setShakeField(null), 300); }, []);
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!email.trim()) { newErrors.email = "Email is required"; shake("email"); }
-    if (!password.trim()) { newErrors.password = "Password is required"; shake("password"); }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    if (!validate()) return;
-    setLoading(true);
-    const { error } = await login(email.trim(), password);
-    setLoading(false);
-    if (error) {
-      setAuthError(error);
-      shake("email");
-      return;
-    }
-    navigate("/dashboard");
-  };
+  const loading = false;
+  const shownError = authError ?? authNotice;
 
   return (
     <div className="flex min-h-[100dvh]">
@@ -72,41 +41,10 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center px-6 py-12" style={{ backgroundColor: "#F9F9F9", backgroundImage: "radial-gradient(circle at center, #FAFAFA 0%, #F9F9F9 100%)" }}>
         <div className="w-full max-w-[420px] animate-fade-in-up">
           <h1 className="text-[28px] font-bold text-[#000000] mb-2 tracking-[-0.02em]">Welcome back</h1>
-          <p className="text-[14px] text-[#525252] mb-8">Sign in with your Magaya ELMS account</p>
-          {authError && (
-            <div className="mb-5 px-4 py-3 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{authError}</div>
+          <p className="text-[14px] text-[#525252] mb-8">Sign in with your Magaya Microsoft 365 account</p>
+          {shownError && (
+            <div className="mb-5 px-4 py-3 rounded-lg border border-[#B91C1C]/30 bg-[#B91C1C]/5 text-[13px] text-[#B91C1C]">{shownError}</div>
           )}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <div>
-              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Email</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#9C9C9C]" />
-                <input type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); if (errors.email) { const n = { ...errors }; delete n.email; setErrors(n); } }} placeholder="you@magaya.co.zw" className={cn("w-full h-[44px] pl-10 pr-4 rounded-lg border bg-white text-[14px] outline-none transition-all duration-150", (errors.email || authError) && shakeField === "email" ? "border-[#B91C1C] ring-2 ring-[rgba(185,28,28,0.15)] animate-shake" : "border-[#DDDDDD] focus:border-[#EDC817] focus:ring-[3px] focus:ring-[rgba(237, 200, 23,0.1)]")} />
-              </div>
-              {errors.email && <p className="text-[12px] text-[#B91C1C] mt-1">{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-[13px] font-medium text-[#525252] mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#9C9C9C]" />
-                <input type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); if (errors.password) { const n = { ...errors }; delete n.password; setErrors(n); } }} placeholder="Enter your password" className={cn("w-full h-[44px] pl-10 pr-10 rounded-lg border bg-white text-[14px] outline-none transition-all duration-150", errors.password && shakeField === "password" ? "border-[#B91C1C] ring-2 ring-[rgba(185,28,28,0.15)] animate-shake" : "border-[#DDDDDD] focus:border-[#EDC817] focus:ring-[3px] focus:ring-[rgba(237, 200, 23,0.1)]")} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9C9C9C] hover:text-[#525252] transition-colors">{showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}</button>
-              </div>
-              {errors.password && <p className="text-[12px] text-[#B91C1C] mt-1">{errors.password}</p>}
-            </div>
-            <div className="flex items-center justify-end mt-1">
-              <button type="button" className="text-[13px] font-medium text-[#8C7600] hover:underline" onClick={() => setAuthError("Password resets are handled by IT. Contact the system administrator.")}>Forgot password?</button>
-            </div>
-            <button type="submit" disabled={loading} className={cn("w-full h-[48px] rounded-lg text-[15px] font-semibold text-black flex items-center justify-center gap-2 transition-all duration-150", loading ? "bg-[#D9B60F] cursor-not-allowed" : "bg-[#EDC817] hover:bg-[#D9B60F] hover:scale-[1.01] active:scale-[0.98]")}>
-              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Sign In<ArrowRight className="w-[18px] h-[18px]" /></>}
-            </button>
-          </form>
-
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-[#DDDDDD]" />
-          <span className="text-[11px] text-[#9C9C9C] uppercase tracking-[0.08em]">or</span>
-          <div className="flex-1 h-px bg-[#DDDDDD]" />
-        </div>
 
         <button type="button" disabled={ssoLoading || loading}
           onClick={async () => {
@@ -129,7 +67,7 @@ export default function Login() {
           </svg>
           {ssoLoading ? "Redirecting to Microsoft..." : "Sign in with Microsoft"}
         </button>
-        <p className="text-[11px] text-[#9C9C9C] text-center mt-3">Use your Magaya Microsoft 365 account. Access requires an ELMS profile set up by IT.</p>
+        <p className="text-[11px] text-[#9C9C9C] text-center mt-3">Access requires an ELMS account set up by IT. HR and administrator accounts also confirm a 6-digit code from an authenticator app.</p>
           <p className="text-center text-[11px] text-[#9C9C9C] mt-8">Access is provisioned by HQ IT. Your role and site are assigned to your account.</p>
           <p className="text-center text-[11px] text-[#9C9C9C] mt-2">ELMS v2.0</p>
         </div>
